@@ -4,18 +4,17 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 from datetime import datetime
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-import time
 from selenium.webdriver.common.action_chains import ActionChains
 import pyautogui
 import pandas as pd
+import re
 import os
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
 from selenium.webdriver.support.ui import Select
 
-
+debug = False
 
 def set_up_driver(link):
     # Set up WebDriver
@@ -43,45 +42,70 @@ def set_up_full_log_in(link, name, password, verification):
     return driver
 
 
-import pandas as pd
-from datetime import datetime
+def find_file_with_number(base_path, extracted_number):
+    for root, dirs, files in os.walk(base_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            try:
+                with open(file_path, 'r') as f:
+                    content = f.read()
+                    if str(extracted_number) in content:
+                        return s.path.join(base_path, file)  # Return the path of the file containing the number
+            except Exception as e:
+                print(f"Error reading {file}: {e}")
+    return None  # If no file is found
 
 
-def process_excel(file_path):
-    # Load the Excel file with specific column types
-    df = pd.read_excel(file_path, engine='openpyxl', dtype={2: str, 4: str})
+def process_excel(file_path, base_path="/"):
+
 
     customers = []
     print("working on:")
 
-    for index, row in df.iterrows():
-        # Check if column A (index 0) is empty
-        if pd.isna(row[0]):  # Check if column A (first column) is empty
-            break  # Exit the loop
+    try:
+        # Load the Excel file with specific column types
+        with pd.ExcelFile(file_path, engine='openpyxl') as xls:
+            df = pd.read_excel(xls, dtype={2: str, 4: str})  # Read with column types
 
-        # Get values from the row
-        id_value = row[2]  # ID from column C (index 2)
-        date_value = row[3]  # Date from column D (index 3)
-        file_name = row[4]  # File name from column E (index 4)
+        for index, row in df.iterrows():
+            # Check if column A (index 0) is empty
+            if pd.isna(row[0]):  # Check if column A (first column) is empty
+                break  # Exit the loop
 
-        # Convert date string to datetime object if needed
-        if isinstance(date_value, str):
-            date_value = datetime.strptime(date_value, '%Y-%m-%d')  # Adjust format if needed
+            # Get values from the row
+            id_value = row[2]  # ID from column C (index 2)
+            date_value = row[3]  # Date from column D (index 3)
+            file_name = row[4]  # File name from column E (index 4)
+            if base_path != "/":
+                match = re.search(r"\d{4,}", file_name)
+                if match:
+                    extracted_number = match.group()
+                    print("match", extracted_number)
+                    file_name = find_file_with_number(base_path, extracted_number)
 
-        # Extract day, month, and year
-        customers.append({
-            "row": index + 2,  # Adding row number (1-based)
-            "id": id_value,
-            "day": date_value.day,
-            "month": date_value.month,
-            "year": date_value.year,
-            "file": file_name,
-            "rows": [index + 2]  # Initialize rows list with the first occurrence
-        })
+            # Convert date string to datetime object if needed
+            if isinstance(date_value, str):
+                date_value = datetime.strptime(date_value, '%Y-%m-%d')  # Adjust format if needed
 
-        print(
-            f"           Row: {index + 2}, ID: {id_value}, Date: {date_value.day}-{date_value.month}-{date_value.year}, file: {file_name}")
+            # Extract day, month, and year
+            customers.append({
+                "row": index + 2,  # Adding row number (1-based)
+                "id": id_value,
+                "day": date_value.day,
+                "month": date_value.month,
+                "year": date_value.year,
+                "file": file_name,
+                "rows": [index + 2]  # Initialize rows list with the first occurrence
+            })
 
+            print(
+                f"           Row: {index + 2}, ID: {id_value}, Date: {date_value.day}-{date_value.month}-{date_value.year}, file: {file_name}")
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+    except PermissionError:
+        print(f"Error: Permission denied. Close '{file_path}' if it's open.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
     return customers
 
 
@@ -100,24 +124,43 @@ def get_unique_customers(customer_list):
 
 
 def write_to_excel(file_path, row, col, txt):
-    # Load the existing Excel file
-    wb = load_workbook(file_path)
-    sheet = wb.active  # Get the active sheet
+    try:
+        # Load the existing Excel file
+        if debug:
+            print("STEP 1")
+        wb = load_workbook(file_path)
+        if debug:
+            print("STEP 2")
+        sheet = wb.active  # Get the active sheet
+        if debug:
+            print("STEP 3")
+        # Write the text to the specified cell
+        cell = sheet.cell(row=row, column=col)
+        if debug:
+            print("STEP 4")
+        cell.value = txt
+        if debug:
+            print("STEP 5")
 
-    # Write the text to the specified cell
-    cell = sheet.cell(row=row, column=col, value=txt)
+        # Center align the text in the cell
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        if debug:
+            print("STEP 6")
+        # Save the modified file
+        wb.save(file_path)
+        wb.close()  # Close the workbook when you're done with it
 
-    # Center align the text in the cell
-    cell.alignment = Alignment(horizontal="center", vertical="center")
+        print(f"Text '{txt}' written to row {row}, column {col} (centered) in '{file_path}'")
 
-    # Save the modified file
-    wb.save(file_path)
-    # print(f"Text '{txt}' written to row {row}, column {col} (centered) in '{file_path}'")
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+    except Exception as e:
+        print(f"An error occurred: {repr(e)}")
 
 
-def clear_col(file_path,col,end_of_col):
-    for i in range(2,end_of_col+2):
-        write_to_excel(file_path,i,col,"")
+def clear_col(file_path, col, end_of_col):
+    for i in range(2, end_of_col + 2):
+        write_to_excel(file_path, i, col, "")
 
 
 def clear_table(driver, start, end):
@@ -140,4 +183,24 @@ def clear_table(driver, start, end):
     #         EC.element_to_be_clickable((By.ID, "9999999999")))
     #     treatment_option.click()
 
-        driver.refresh()
+    driver.refresh()
+
+
+def extract_date(alert_content):
+    """
+    Extracts the first date in the format XX/XX/XXXX from a given string.
+
+    :param alert_content: The input element to search for a date.
+    :return: The extracted date as a string if found, otherwise None.
+    """
+
+    alert_txt = alert_content.text
+    print("alert txt = ", alert_txt)
+
+    print(alert_txt)
+    date_pattern = r"\b\d{2}/\d{2}/\d{4}\b"
+    match = re.search(date_pattern, alert_txt)
+    return match.group() if match else None
+
+
+
