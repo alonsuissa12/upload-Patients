@@ -13,6 +13,8 @@ import pyautogui
 import pandas as pd
 import os
 import functions
+from Macabi_GUI import get_basic_info2
+
 
 alon = True
 debug = True
@@ -31,10 +33,12 @@ need_new_approval_col = 8  # TODO:  check if needed
 
 # Load the Excel file
 
-if alon:
-    XL_path = r"C:\Users\alons\Downloads\דגימות מכבי.xlsx"
-else:
-    XL_path = r"C:\Users\HOME\Desktop\reports\macabi\participants_macabi.xlsx"
+# if alon:
+#     XL_path = r"C:\Users\alons\Downloads\דגימות מכבי.xlsx"
+# else:
+#     XL_path = r"C:\Users\HOME\Desktop\reports\macabi\participants_macabi.xlsx"
+
+XL_path,login_password = get_basic_info2()
 
 costumers = functions.process_excel(XL_path)
 

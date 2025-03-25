@@ -13,7 +13,7 @@ import os
 import random
 import functions
 from selenium.common.exceptions import TimeoutException
-from GUI import get_basic_info
+from Clalit_GUI import get_basic_info
 
 alon = False
 debug = False
