@@ -15,12 +15,10 @@ import os
 import functions
 from Macabi_GUI import get_basic_info2
 
-
-alon = True
-debug = True
+debug = False
 
 login_id = "126280"
-login_password = "Zahalafarm2024"
+login_password = ""
 provider_type = "5"
 provider_code = "24657"
 site_link = "https://wmsup.mac.org.il/mbills"
@@ -31,14 +29,7 @@ need_new_approval_col = 8  # TODO:  check if needed
 # python -m PyInstaller --onefile --add-data "C:\Users\alons\PycharmProjects\script for farm\*;script for farm" "C:\Users\alons\PycharmProjects\script for farm\venv\src\Macabi_script.py"
 
 
-# Load the Excel file
-
-# if alon:
-#     XL_path = r"C:\Users\alons\Downloads\דגימות מכבי.xlsx"
-# else:
-#     XL_path = r"C:\Users\HOME\Desktop\reports\macabi\participants_macabi.xlsx"
-
-XL_path,login_password = get_basic_info2()
+XL_path, login_password = get_basic_info2()
 
 costumers = functions.process_excel(XL_path)
 
@@ -58,7 +49,7 @@ try:
     )
 
     # Enter the password
-    password_input.send_keys("Zahalafarm2024")
+    password_input.send_keys(login_password)
 
     # Click the login button
     login_button = driver.find_element(By.CSS_SELECTOR, "input[type='submit']")
@@ -99,25 +90,21 @@ extend.click()
 
 # insert patient
 number_of_inserts = len(costumers)
-number_of_groups = number_of_inserts // 8 + 1
-last_group_size = number_of_inserts % 8
-print(number_of_groups)
 
 functions.clear_col(XL_path, did_reported_col, number_of_inserts)
 
-for i in range(0, number_of_groups):  # todo: change!
-    end = 9
-    if i == number_of_groups - 1:  # if its the last group
-        end = last_group_size + 1
-        print("last one")
+if number_of_inserts > 0:
+    current_patient = costumers[0]
 
-    try:
+    for j in range(0, number_of_inserts):
+        try:
+            time.sleep(1)
+            time.sleep(0.5)
+            current_patient = costumers[j]
 
-        for j in range(1, end):
-            current_patient = costumers[i * 8 + j - 1]
-
-            id_element = driver.find_element(By.ID, "ID" + str(j))
-            date_element = driver.find_element(By.ID, "treatmentDate" + str(j))
+            id_element = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "ID1")))
+            date_element = driver.find_element(By.ID, "treatmentDate1")
             date_element.clear()
             id_element.clear()
 
@@ -132,22 +119,13 @@ for i in range(0, number_of_groups):  # todo: change!
             if len(month) == 1:
                 month = "0" + month
 
-            # try:
-            #     treatment_option = WebDriverWait(driver, 3).until(
-            #         EC.element_to_be_clickable((By.ID, "99701")))
-            #     treatment_option.click()
-            # except:
-            #     treatment_option = WebDriverWait(driver, 3).until(
-            #         EC.element_to_be_clickable((By.ID, "99601")))
-            #     treatment_option.click
-            #
-
             date_element.send_keys(day + "/" + month + "/" + str(current_patient["year"]))
 
-        for j in range(1, end):
+
+
             # fill up treatment
             treatment_picker = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.ID, "treatmentDescr" + str(j))))
+                EC.element_to_be_clickable((By.ID, "treatmentDescr1")))
             driver.execute_script("arguments[0].click();", treatment_picker)
             try:
                 treatment = WebDriverWait(driver, 10).until(
@@ -170,39 +148,56 @@ for i in range(0, number_of_groups):  # todo: change!
                     )
                 )
                 treatment.click()
-        # functions.clear_table(driver, 1, 9)
 
-        # click on save
-        save_button = driver.find_element("id", "imgSave")
-        save_button.click()
+            # Find left over treatments
+            time.sleep(0.2)
+            left_over_element = driver.find_element("id", "fromField1")
+            left_over_treatments = left_over_element.get_attribute("value")
+            if debug:
+                print(f"left over treatments for {current_patient['id']}: {left_over_treatments}")
 
-        # click on enter
-        time.sleep(1)
-        pyautogui.press("enter")
 
-        # wait for the data to be updated
-        while True:
+            # check for error:
             try:
-                id_element = driver.find_element(By.ID, "ID1")
-                break
-            except:
-                time.sleep(2)
+                error_message_element = driver.find_element(By.ID, "ErrorMessageId")
+                error_message_text = error_message_element.text
+                if "לא" in error_message_text:
+                    raise Exception(f"Error message: {error_message_text}")
+            except NoSuchElementException:
+                pass  # Do nothing if the element is not found
 
-        pyautogui.press("enter")
+            # click on save
+            save_button = driver.find_element("id", "imgSave")
+            save_button.click()
 
-        # update the Excel
-        for j in range(1, end):
-            current_patient = costumers[i * 8 + j - 1]
+            # click on enter
+            time.sleep(1)
+            pyautogui.press("enter")
+
+            # wait for the data to be updated
+            while True:
+                try:
+                    id_element = driver.find_element(By.ID, "ID1")
+                    break
+                except:
+                    time.sleep(2)
+
+            pyautogui.press("enter")
+
+            # update the Excel
             for r in current_patient["rows"]:
                 functions.write_to_excel(XL_path, r, did_reported_col, "V")
+                functions.write_to_excel(XL_path, r, left_over_treatment_col, left_over_treatments)
 
 
-    except:
-        # update the Excel
-        for j in range(1, end):
-            current_patient = costumers[i * 8 + j - 1]
+
+        except:
+            # update the Excel
             for r in current_patient["rows"]:
                 functions.write_to_excel(XL_path, r, did_reported_col, "X")
+                driver.refresh()
+                time.sleep(1)
+                pyautogui.press("enter")
 
 # Close the browser
 driver.quit()
