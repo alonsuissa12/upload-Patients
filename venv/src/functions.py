@@ -69,7 +69,7 @@ def process_excel(file_path, base_path="/"):
 
         for index, row in df.iterrows():
             # Check if column A (index 0) is empty
-            if pd.isna(row[0]):  # Check if column A (first column) is empty
+            if pd.isna(row[2]):  # Check if column A (first column) is empty
                 break  # Exit the loop
 
             # Get values from the row
