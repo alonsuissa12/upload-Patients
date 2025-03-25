@@ -17,10 +17,8 @@ from Clalit_GUI import get_basic_info
 
 alon = False
 debug = False
-
 # base_path = r"C:\Users\alons\Downloads\files_for_clalit"
-base_path, XL_path, report, upload_files,login_password = get_basic_info()
-
+base_path, XL_path, report, upload_files, login_password = get_basic_info()
 
 if alon:
     open_calander_x = 800
@@ -28,7 +26,6 @@ if alon:
 else:
     open_calander_x = 570
     open_calander_y = 700
-
 
 login_name = "sm81471"
 login_verification = "123"
