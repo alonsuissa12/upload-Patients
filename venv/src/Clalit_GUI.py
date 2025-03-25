@@ -57,7 +57,7 @@ def get_basic_info():
     # Initialize GUI
     root = tk.Tk()
     root.title("Settings")
-    root.geometry("600x600")  # Adjusted height to ensure space for Submit
+    root.geometry("600x800")  # Adjusted height to ensure space for Submit
     root.resizable(False, False)
 
     # Styling - Different Fonts for Labels, Buttons, and Entries

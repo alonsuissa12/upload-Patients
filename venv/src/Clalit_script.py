@@ -223,9 +223,15 @@ if report:
                         counter += 1
                         print(f"first word:{words[0]}")
                         print(f"second word:{words[1]}")
-                        if counter >= 20:
+                        if counter >= 40:
                             raise TimeoutError("עבר יותר מדי זמן ולא נמצא האלמנט!")
                     elif words[1] == "נדחתה":
+                        # write X
+                        functions.write_to_excel(XL_path, costumer["row"], did_reported_col, "X")
+                        if "קיימת" in words and "כבר" in words:
+                            # still try to report
+                            reported.append(costumer)
+
                         raise TimeoutError(f"תביעה נדחתה")
                     elif words[1] == "נקלטה,":
                         loop_traker += 1
