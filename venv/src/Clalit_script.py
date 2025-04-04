@@ -34,25 +34,45 @@ did_file_upload_col = 7
 did_reported_col = 6
 left_over_treatment_col = 8
 need_new_approval_col = 9
+error_col = 10
 
 # Loop through each row starting from line 2 (index 1 in pandas)
-costumers = functions.process_excel(XL_path)
+try:
+    costumers = functions.process_excel(XL_path)
+except:
+    functions.write_to_excel(XL_path, 1, error_col, "error while processing excel")
+    report = 0
+    upload_files = 0
 
-functions.clear_col(XL_path, did_reported_col, len(costumers))
-functions.clear_col(XL_path, did_file_upload_col, len(costumers))
-functions.clear_col(XL_path, left_over_treatment_col, len(costumers))
-functions.clear_col(XL_path, need_new_approval_col, len(costumers))
+try:
+    functions.clear_col(XL_path, did_reported_col, len(costumers))
+    functions.clear_col(XL_path, did_file_upload_col, len(costumers))
+    functions.clear_col(XL_path, left_over_treatment_col, len(costumers))
+    functions.clear_col(XL_path, need_new_approval_col, len(costumers))
+    functions.clear_col(XL_path, error_col, len(costumers))
+
+except:
+    functions.write_to_excel(XL_path, 1, error_col, "error while clearing excel")
+    report = 0
+    upload_files = 0
 
 # set up driver
-driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
+driver = 0
+if report or upload_files:
+    try:
+        driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
+    except:
+        functions.write_to_excel(XL_path, 1, error_col, "error with opening driver or log-in")
+        report = 0
+        upload_files = 0
 
-# Wait for the claims button
-try:
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "ctl00_MainContent_cmdNewClaim")))
-except:
-    print("WRONG PASSWORD!")
-    driver.quit()
-    quit(1)
+    # Wait for the claims button
+    try:
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "ctl00_MainContent_cmdNewClaim")))
+    except:
+        print("WRONG PASSWORD!")
+        driver.quit()
+        quit(1)
 
 # Select the correct provider using XPath
 provider_names = [
@@ -78,41 +98,61 @@ if report:
         month = costumer["month"]
 
         try:
-
             # Click "הגשת תביעות" (Submit Claims)
-            report_filing = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.ID, "ctl00_MainContent_cmdNewClaim")))
-            report_filing.click()
+            try:
+                report_filing = WebDriverWait(driver, 20).until(
+                    EC.element_to_be_clickable((By.ID, "ctl00_MainContent_cmdNewClaim")))
+                report_filing.click()
+            except RuntimeError as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col,
+                                         "error with clicking -  הגשת תביעות   not found (run time)")
+                raise e
+
+            except Exception as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with clicking -  הגשת תביעות")
+                raise e
 
             # Wait for ID field
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "ctl00_MainContent_txtID")))
+            try:
+                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "ctl00_MainContent_txtID")))
+            except Exception as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "could not find id")
+                raise e
 
             # Enter ID
-            driver.find_element(By.ID, "ctl00_MainContent_txtID").send_keys(str(id))
+            try:
+                driver.find_element(By.ID, "ctl00_MainContent_txtID").send_keys(str(id))
+            except Exception as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with filling id")
+                raise e
 
             # Wait for and select provider
             # Wait for dropdown arrow to be clickable
-            dropdown_arrow = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CLASS_NAME, "css-b3yrsp-indicatorContainer"))  # Adjust if needed
-            )
-
-            # Scroll into view if necessary
-            driver.execute_script("arguments[0].scrollIntoView();", dropdown_arrow)
-
-            # Try clicking the dropdown arrow
             try:
-                dropdown_arrow.click()
-            except:
-                print("Selenium click failed. Trying JavaScript click...")
-                driver.execute_script("arguments[0].click();", dropdown_arrow)
+                dropdown_arrow = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.CLASS_NAME, "css-b3yrsp-indicatorContainer"))
+                )
 
-            # Randomly select a provider
-            chosen_provider = random.choice(provider_names)
-            print(f"Chosen provider: {chosen_provider}")
-            provider_option = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), '{chosen_provider}')]"))
-            )
-            provider_option.click()
+                # Scroll into view if necessary
+                driver.execute_script("arguments[0].scrollIntoView();", dropdown_arrow)
+
+                # Try clicking the dropdown arrow
+                try:
+                    dropdown_arrow.click()
+                except:
+                    print("Selenium click failed. Trying JavaScript click...")
+                    driver.execute_script("arguments[0].click();", dropdown_arrow)
+
+                # Randomly select a provider
+                chosen_provider = random.choice(provider_names)
+                print(f"Chosen provider: {chosen_provider}")
+                provider_option = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), '{chosen_provider}')]"))
+                )
+                provider_option.click()
+            except Exception as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with selecting provider")
+                raise e
 
             ###################
             #    DATE         #
@@ -124,51 +164,69 @@ if report:
             wait = WebDriverWait(driver, 10)
 
             # choose year:
-            # //*[@id="ui-datepicker-div"]/div/div/select[2]
-            select_year = wait.until(
-                EC.visibility_of_element_located((By.XPATH, f'//*[@id="ui-datepicker-div"]/div/div/select[2]')))
-            select_year.click()
-            year_option = wait.until(EC.visibility_of_element_located(
-                (By.XPATH, f'//*[@id="ui-datepicker-div"]/div/div/select[2]/option[@value="{str(year)}"]')
-            ))
-            year_option.click()
+            try:
+                select_year = wait.until(
+                    EC.visibility_of_element_located((By.XPATH, f'//*[@id="ui-datepicker-div"]/div/div/select[2]')))
+                select_year.click()
+                year_option = wait.until(EC.visibility_of_element_located(
+                    (By.XPATH, f'//*[@id="ui-datepicker-div"]/div/div/select[2]/option[@value="{str(year)}"]')
+                ))
+                year_option.click()
+            except Exception as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col,
+                                         "error with selecting year (or openning calander)")
+                raise e
 
             # choose month:
-            month = int(month) - 1
-            select_month = wait.until(
-                EC.visibility_of_element_located((By.XPATH, f'/html/body/div[7]/div/div/select[1]')))
-            select_month.click()
+            try:
+                month = int(month) - 1
+                select_month = wait.until(
+                    EC.visibility_of_element_located((By.XPATH, f'/html/body/div[7]/div/div/select[1]')))
+                select_month.click()
 
-            month_option = wait.until(EC.visibility_of_element_located(
-                (By.XPATH, f'//select[@class="ui-datepicker-month"]/option[@value="{str(month)}"]')
-            ))
+                month_option = wait.until(EC.visibility_of_element_located(
+                    (By.XPATH, f'//select[@class="ui-datepicker-month"]/option[@value="{str(month)}"]')
+                ))
 
-            # Click on the desired month option
-            month_option.click()
+                # Click on the desired month option
+                month_option.click()
+            except Exception as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with selecting month")
+                raise e
 
-            calendar_body = wait.until(
-                EC.visibility_of_element_located((By.XPATH, '//*[@id="ui-datepicker-div"]/table/tbody')))
-            td_elements = calendar_body.find_elements(By.XPATH, './/td')
-            while True:
-                # Re-locate all 'td' elements to avoid StaleElementReferenceException
+            try:
+                calendar_body = wait.until(
+                    EC.visibility_of_element_located((By.XPATH, '//*[@id="ui-datepicker-div"]/table/tbody')))
                 td_elements = calendar_body.find_elements(By.XPATH, './/td')
+                while True:
+                    # Re-locate all 'td' elements to avoid StaleElementReferenceException
+                    td_elements = calendar_body.find_elements(By.XPATH, './/td')
 
-                for td in td_elements:
-                    if td.text == str(day):
-                        # Click the element with text '6' (if needed)
-                        td.click()
-                        break
-                else:
-                    # If no match is found, wait for a moment and try again
-                    time.sleep(1)
-                    continue
-                break  # Exit the loop if we found and clicked the element
+                    for td in td_elements:
+                        if td.text == str(day):
+                            # Click the element with text '6' (if needed)
+                            td.click()
+                            break
+                    else:
+                        # If no match is found, wait for a moment and try again
+                        time.sleep(1)
+                        continue
+                    break  # Exit the loop if we found and clicked the element
+            except Exception as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with selecting day")
+                raise e
 
             #  send
-            send_report_button = wait.until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, "/html/body/center/table/tbody/tr/td/form[1]/div[6]/div/input[1]")))
-            send_report_button.click()
+            try:
+                send_report_button = wait.until(
+                    EC.element_to_be_clickable(
+                        (By.XPATH, "/html/body/center/table/tbody/tr/td/form[1]/div[6]/div/input[1]")))
+                send_report_button.click()
+            except Exception as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with sending report")
+                raise e
+
+            # process system messages
 
             try:
                 loop_traker = 0
@@ -179,7 +237,7 @@ if report:
                     # Wait for the element to be present in the DOM
                     if debug:
                         print("is 1 stall", end="")
-                    message = WebDriverWait(driver, 10).until(
+                    message = WebDriverWait(driver, 20).until(
                         EC.presence_of_element_located((By.XPATH,
                                                         "/html/body/center/table/tbody/tr/td/form[1]/table/tbody/tr/td[2]/div/table/tbody/tr[7]/td/div")))
                     if debug:
@@ -257,6 +315,8 @@ if report:
             except Exception as e:
                 print("problem with message:")
                 print(e)
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with processing system messages")
+                raise e
 
             if debug:
                 print("is 3 stall", end="")
@@ -266,21 +326,13 @@ if report:
                     EC.element_to_be_clickable(
                         (By.XPATH, '/html/body/center/table/tbody/tr/td/form[1]/div[6]/div/input[5]')))
                 main_button.click()
-            except:
+            except Exception as e:
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with going back to main")
                 driver.quit()
-
-                # set up driver
                 driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
-
-                # Wait for the claims button
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.ID, "ctl00_MainContent_cmdNewClaim")))
 
             if debug:
                 print(" NO\n")
-
-
-
 
         except Exception as e:
             print(f"FAILED to REPORT for: {id} in date:{day}/{month}/{year}!!!!!!!!!!!!")
