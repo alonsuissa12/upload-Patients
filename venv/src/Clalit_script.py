@@ -289,8 +289,10 @@ if report:
                         if "קיימת" in words and "כבר" in words:
                             # still try to report
                             reported.append(costumer)
+                            functions.write_to_excel(XL_path, costumer["row"], error_col,extracted_text)
+                            functions.write_to_excel(XL_path, costumer["row"], did_reported_col, "X (read errors!)")
+                        break
 
-                        raise TimeoutError(f"תביעה נדחתה")
                     elif words[1] == "נקלטה,":
                         loop_traker += 1
                         if debug:
