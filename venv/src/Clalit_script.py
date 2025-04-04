@@ -121,21 +121,30 @@ if report:
 
             # Enter ID
             try:
-                driver.find_element(By.ID, "ctl00_MainContent_txtID").send_keys(str(id))
+                # driver.find_element(By.ID, "ctl00_MainContent_txtID").send_keys(str(id))
+                driver.execute_script("arguments[0].value = arguments[1];",
+                                      driver.find_element(By.ID, "ctl00_MainContent_txtID"),
+                                      str(id))
             except Exception as e:
                 functions.write_to_excel(XL_path, costumer["row"], error_col, "error with filling id")
                 raise e
 
             # Wait for and select provider
             # Wait for dropdown arrow to be clickable
+            if debug:
+                time.sleep(2)
             try:
                 dropdown_arrow = WebDriverWait(driver, 10).until(
                     EC.element_to_be_clickable((By.CLASS_NAME, "css-b3yrsp-indicatorContainer"))
                 )
+                if debug:
+                    time.sleep(2)
 
                 # Scroll into view if necessary
                 driver.execute_script("arguments[0].scrollIntoView();", dropdown_arrow)
 
+                if debug:
+                    time.sleep(2)
                 # Try clicking the dropdown arrow
                 try:
                     dropdown_arrow.click()
@@ -143,12 +152,16 @@ if report:
                     print("Selenium click failed. Trying JavaScript click...")
                     driver.execute_script("arguments[0].click();", dropdown_arrow)
 
+                if debug:
+                    time.sleep(2)
                 # Randomly select a provider
                 chosen_provider = random.choice(provider_names)
                 print(f"Chosen provider: {chosen_provider}")
                 provider_option = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), '{chosen_provider}')]"))
                 )
+                if debug:
+                    time.sleep(2)
                 provider_option.click()
             except Exception as e:
                 functions.write_to_excel(XL_path, costumer["row"], error_col, "error with selecting provider")
