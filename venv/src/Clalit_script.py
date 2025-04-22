@@ -153,6 +153,17 @@ if report:
                 functions.write_to_excel(XL_path, costumer["row"], error_col, "error with filling id")
                 logger.error(f"error with filling id {repr(e)}")
                 raise e
+            # Locate the family name element
+            family_name_element = driver.find_element(By.ID, "ctl00_MainContent_txtInsuredFamily")
+            logger.info("found family name element")
+            first_name_element = driver.find_element(By.ID, "ctl00_MainContent_txtInsuredName")
+            logger.info("found first name element")
+
+            # Check if the input field is empty
+            if family_name_element.get_attribute("value") == "":
+                logger.info("family name field is empty. filling it now...")
+                family_name_element.send_keys(costumer["last_name"])
+                first_name_element.send_keys(costumer["first_name"])
 
             # Wait for and select provider
             # Wait for dropdown arrow to be clickable

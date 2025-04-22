@@ -76,6 +76,8 @@ def process_excel(file_path, base_path="/"):
             id_value = row[2]  # ID from column C (index 2)
             date_value = row[3]  # Date from column D (index 3)
             file_name = row[4]  # File name from column E (index 4)
+            first_name = row[0]
+            last_name = row[1]
             if base_path != "/":
                 match = re.search(r"\d{4,}", file_name)
                 if match:
@@ -95,7 +97,10 @@ def process_excel(file_path, base_path="/"):
                 "month": date_value.month,
                 "year": date_value.year,
                 "file": file_name,
-                "rows": [index + 2]  # Initialize rows list with the first occurrence
+                "rows": [index + 2],  # Initialize rows list with the first occurrence
+                "first_name": first_name,
+                "last_name": last_name
+
             })
 
             print(
