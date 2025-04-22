@@ -23,6 +23,7 @@ import logger
 
 logger = logger.setup_logger()
 alon = False
+clear_xl = True
 # base_path = r"C:\Users\alons\Downloads\files_for_clalit"
 # base_path = r"C:\Users\alons\Downloads\files_for_clalit"
 base_path, XL_path, report, upload_files, login_password = get_basic_info()
@@ -53,12 +54,13 @@ except:
     report = 0
     upload_files = 0
 try:
-    functions.clear_col(XL_path, did_reported_col, len(costumers))
-    functions.clear_col(XL_path, did_file_upload_col, len(costumers))
-    functions.clear_col(XL_path, left_over_treatment_col, len(costumers))
-    functions.clear_col(XL_path, need_new_approval_col, len(costumers))
-    functions.clear_col(XL_path, error_col, len(costumers))
-    logger.info("cleared all columns")
+    if clear_xl:
+        functions.clear_col(XL_path, did_reported_col, len(costumers))
+        functions.clear_col(XL_path, did_file_upload_col, len(costumers))
+        functions.clear_col(XL_path, left_over_treatment_col, len(costumers))
+        functions.clear_col(XL_path, need_new_approval_col, len(costumers))
+        functions.clear_col(XL_path, error_col, len(costumers))
+        logger.info("cleared all columns")
 
 except:
     logger.error("error while clearing excel")
@@ -452,8 +454,11 @@ if upload_files:
         year = costumer["year"]
         month = costumer["month"]
         file = costumer["file"]
-        full_path = os.path.join(base_path, file)
+        full_path = os.path.abspath(str(os.path.join(base_path, file)))
         logger.info(f"looking for file: {full_path}")
+        full_path_try2 = full_path + ".pdf"
+        full_path = full_path + "_tc.pdf"
+
 
         try:
             wait = WebDriverWait(driver, 10)
@@ -486,19 +491,20 @@ if upload_files:
                 checkbox.click()
                 logger.info("clicked checkbox")
 
-            # Locate element
-            input_element = driver.find_element(By.ID, "ctl00_MainContent_txtInshuredID")
+            # Locate ID element
+            input_ID_element = driver.find_element(By.ID, "ctl00_MainContent_txtInshuredID")
             logger.info("found ID element")
 
             # Scroll into view
-            driver.execute_script("arguments[0].scrollIntoView();", input_element)
+            driver.execute_script("arguments[0].scrollIntoView();", input_ID_element)
             logger.info("scrolled into view")
             time.sleep(1)  # Short delay to allow UI updates
 
             # Try clicking and then sending keys
-            input_element.click()
-            input_element.clear()
-            input_element.send_keys(str(id))
+            input_ID_element.click()
+            input_ID_element.clear()
+            driver.execute_script("arguments[0].value = arguments[1];",input_ID_element,str(id))
+
             logger.info(f"entered ID: {id}")
 
             # filter
@@ -532,17 +538,26 @@ if upload_files:
             logger.info("switched to iframe")
 
             # Wait for iframe content to load
-            time.sleep(1)
+            time.sleep(3)
 
             # Find the hidden file input field
             file_input = wait.until(EC.presence_of_element_located((By.ID, "fileToUpload1")))
             logger.info("found file input box")
 
-            time.sleep(1)
-
-            file_input.send_keys(str(full_path))
+            time.sleep(2)
+            logger.info(f"sending file: {full_path}")
+            #normalized_path = os.path.abspath(str(full_path))
+            try:
+                file_input.send_keys(str(full_path))
+            except InvalidArgumentException() as e:
+                logger.info(f"error with sending file: {repr(e)} trying the path {full_path_try2}")
+                file_input.send_keys(str(full_path_try2))
+            except Exception as e:
+                logger.info(f"error with sending file: {repr(e)}")
+                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with sending file")
+                raise e
             logger.info(f"sent file")
-            time.sleep(1)
+            time.sleep(2)
 
             # scroll down
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
