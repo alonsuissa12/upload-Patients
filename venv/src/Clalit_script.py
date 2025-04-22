@@ -406,6 +406,7 @@ if report:
                 for r in costumer["rows"]:
                     functions.write_to_excel(XL_path, r, did_reported_col, "X")
             driver.quit()
+
             driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
 
 
