@@ -568,8 +568,10 @@ if upload_files:
             for repoted_c in reported:
                 for r in repoted_c["rows"]:
                     if file_uploaded:
+                        logger.info(f"Writing to excel - V ,for {id}")
                         functions.write_to_excel(XL_path, r, did_file_upload_col, "V")
                     else:
+                        logger.info(f"Writing to excel - X ,for {id}")
                         functions.write_to_excel(XL_path, r, did_file_upload_col, "X")
 
 print("DONE")
