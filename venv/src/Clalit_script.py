@@ -345,7 +345,7 @@ if report:
                         logger.info("found the word מספר")
                         if counter >= 80:
                             logger.error("timeout error - TOO MUCH TIME")
-                            raise TimeoutError("עבר יותר מדי זמן ולא נמצא האלמנט!")
+                            raise TimeoutError("עבר יותר מדי זמן ולא נמצאה הודעת אישור")
                     elif words[1] == "נדחתה":
                         logger.info("found the word נדחתה")
                         # write X
@@ -421,7 +421,7 @@ if upload_files:
         for uc in unique_customers:
             for c in costumers:
                 if uc["id"] == c["id"] and (
-                        uc["day"] != c["day"] and uc["month"] != c["month"] and uc["year"] != c["year"]):
+                        uc["day"] != c["day"] or uc["month"] != c["month"] or uc["year"] != c["year"]):
                     uc["rows"].append(c["row"])
 
         reported = unique_customers
@@ -431,7 +431,7 @@ if upload_files:
         for uc in reported:
             for c in costumers:
                 if uc["id"] == c["id"] and (
-                        uc["day"] != c["day"] and uc["month"] != c["month"] and uc["year"] != c["year"]):
+                        uc["day"] != c["day"] or uc["month"] != c["month"] or uc["year"] != c["year"]):
                     uc["rows"].append(c["row"])
 
     unique_customers = reported
@@ -440,9 +440,10 @@ if upload_files:
         logger.info(f"found unique customer {uc['id']} with rows: [ {uc['rows']}]")
     time.sleep(1)
 
-
+    current_customer = 0
 
     for costumer in reported:
+        current_customer = costumer
         file_uploaded = False
         logger.info(f"start uploading for: {costumer['id']}")
         id = costumer["id"]
@@ -576,17 +577,18 @@ if upload_files:
             driver.quit()
             driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
         finally:
-            for repoted_c in reported:
-                for r in repoted_c["rows"]:
+            if current_customer != 0:
+                for r in current_customer["rows"]:
                     if file_uploaded:
                         logger.info(f"Writing to excel - V ,for {id}")
                         functions.write_to_excel(XL_path, r, did_file_upload_col, "V")
                     else:
                         logger.info(f"Writing to excel - X ,for {id}")
                         functions.write_to_excel(XL_path, r, did_file_upload_col, "X")
+                current_customer = 0
 
-print("DONE")
+logger.info("DONE")
 driver.quit()
-input("Press Enter to exit...")
+
 
 
