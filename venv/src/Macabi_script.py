@@ -1,4 +1,7 @@
+from numpy.f2py.auxfuncs import throw_error
+from pyspark.sql.connect.functions import years
 from selenium import webdriver
+from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -83,9 +86,27 @@ patient_intake = WebDriverWait(driver, 10).until(
 
 # Click the element
 patient_intake.click()
+
+time.sleep(3)
+# check the month reprot
+if len(costumers) > 0:
+    month = str(costumers[0]["month"])
+    year = str(costumers[0]["year"])
+    if len(month) == 1:
+        month = "0" + month
+    if len(year) == 2:
+        year = "20" + year
+
+    print("month = ", month , "year = " , year)
+    date = month + "/" + year
+    month_report = Select(driver.find_element("id", "month"))
+    month_report.select_by_visible_text(date)
+
 # open extend option
-extend = driver.find_element(By.XPATH,
-                             "/html/body/center/table/tbody/tr/td/table/tbody/tr/td[6]/a/u")
+# extend = driver.find_element(By.XPATH,
+#                              "/html/body/center/table/tbody/tr/td/table/tbody/tr/td[6]/a/u")
+wait = WebDriverWait(driver, 10)
+extend = wait.until(EC.presence_of_element_located((By.XPATH, "//u[text()='הוספה ברצף']")))
 extend.click()
 
 # insert patient
@@ -98,8 +119,7 @@ if number_of_inserts > 0:
 
     for j in range(0, number_of_inserts):
         try:
-            time.sleep(1)
-            time.sleep(0.5)
+            time.sleep(1.5)
             current_patient = costumers[j]
 
             id_element = WebDriverWait(driver, 10).until(
@@ -120,8 +140,6 @@ if number_of_inserts > 0:
                 month = "0" + month
 
             date_element.send_keys(day + "/" + month + "/" + str(current_patient["year"]))
-
-
 
             # fill up treatment
             treatment_picker = WebDriverWait(driver, 10).until(
@@ -155,7 +173,6 @@ if number_of_inserts > 0:
             left_over_treatments = left_over_element.get_attribute("value")
             if debug:
                 print(f"left over treatments for {current_patient['id']}: {left_over_treatments}")
-
 
             # check for error:
             try:
