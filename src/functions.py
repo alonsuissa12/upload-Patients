@@ -1,9 +1,11 @@
+from multiprocessing.reduction import duplicate
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 import pyautogui
@@ -15,6 +17,7 @@ from openpyxl.styles import Alignment
 from selenium.webdriver.support.ui import Select
 
 debug = False
+
 
 def set_up_driver(link):
     # Set up WebDriver
@@ -50,15 +53,13 @@ def find_file_with_number(base_path, extracted_number):
                 with open(file_path, 'r') as f:
                     content = f.read()
                     if str(extracted_number) in content:
-                        return s.path.join(base_path, file)  # Return the path of the file containing the number
+                        return os.path.join(base_path, file)  # Return the path of the file containing the number
             except Exception as e:
                 print(f"Error reading {file}: {e}")
     return None  # If no file is found
 
 
 def process_excel(file_path, base_path="/"):
-
-
     customers = []
     print("working on:")
 
@@ -96,6 +97,7 @@ def process_excel(file_path, base_path="/"):
                 "day": date_value.day,
                 "month": date_value.month,
                 "year": date_value.year,
+                "date": date_value,
                 "file": file_name,
                 "rows": [index + 2],  # Initialize rows list with the first occurrence
                 "first_name": first_name,
@@ -111,6 +113,23 @@ def process_excel(file_path, base_path="/"):
         print(f"Error: Permission denied. Close '{file_path}' if it's open.")
     except Exception as e:
         print(f"An error occurred: {e}")
+
+    try:
+        # find if there r duplicates base of id and name
+        for i in range(len(customers)):
+            for j in range(i + 1, len(customers)):
+                # if there is the same customer with the same id and date
+                if customers[i]["id"] == customers[j]["id"] and customers[i]["date"] == customers[j]["date"]:
+                    # push the dup one day later
+                    new_date = customers[j]["date"] + timedelta(days=1)
+                    # if the month is different, push it to the previous day
+                    if customers[i]["month"] != customers[j]["date"].month:
+                        new_date =  customers[j]["date"] - timedelta(days=1)
+                    customers[j]["date"] = new_date
+                    customers[j]["day"] = new_date.day
+    except Exception as e:
+        print(f"An error occurred while looking for duplicates: {e}")
+
     return customers
 
 
@@ -206,6 +225,3 @@ def extract_date(alert_content):
     date_pattern = r"\b\d{2}/\d{2}/\d{4}\b"
     match = re.search(date_pattern, alert_txt)
     return match.group() if match else None
-
-
-
