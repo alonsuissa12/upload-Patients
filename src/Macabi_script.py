@@ -15,8 +15,12 @@ import pandas as pd
 import os
 import functions
 from Macabi_GUI import get_basic_info2
+import logger
 
+# -------- logger --------
+logger = logger.setup_logger("MACABI")
 
+# -------- config variables --------
 debug = False
 
 login_id = "126280"
@@ -28,22 +32,29 @@ did_reported_col = 6
 left_over_treatment_col = 7
 need_new_approval_col = 8
 
-# python -m PyInstaller --onefile --add-data "C:\Users\alons\PycharmProjects\script for farm\*;script for farm" "C:\Users\alons\PycharmProjects\script for farm\venv\src\Macabi_script.py"
+# --------- main code ---------
 
+logger.info("Starting script")
 
 XL_path, login_password = get_basic_info2()
 
+logger.info("Excel path: " + XL_path)
+
 costumers = functions.process_excel(XL_path)
+logger.info("Number of patients: " + str(len(costumers)))
 
 driver = functions.set_up_driver(site_link)
+logger.info("Driver set up")
 
 try:
+    logger.info("Trying to login")
     # Wait for the username field to be visible
     WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.ID, "username")))
 
     # Fill in the username
     username_input = driver.find_element(By.ID, "username")
-    username_input.send_keys("126280")
+    username_input.send_keys(login_id)
+    logger.info("Username filled")
 
     # Wait until the password input field is present and visible
     password_input = WebDriverWait(driver, 10).until(
@@ -52,168 +63,198 @@ try:
 
     # Enter the password
     password_input.send_keys(login_password)
+    logger.info("Password field filled")
 
     # Click the login button
     login_button = driver.find_element(By.CSS_SELECTOR, "input[type='submit']")
     login_button.click()
+    logger.info("Login button clicked")
 
     # Wait until the 'ServiceType' input field is present and visible
     service_type = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "ServiceType"))
     )
     service_type.send_keys(provider_type)
+    logger.info("Service type filled")
 
     # Wait until the 'ServiceCode' input field is present and visible
     service_code = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "ServiceCode"))
     )
     service_code.send_keys(provider_code)
+    logger.info("Service code filled")
 
     enter = driver.find_element(By.ID, "Save")
     enter.click()
-
-    print("Login attempt completed.")
+    logger.info("Login attempt completed.")
 
 except Exception as e:
-    print(f"Error during login: {e}")
+    logger.info(f"Error during login: {e}")
 
-# Wait until the element is present and clickable
-patient_intake = WebDriverWait(driver, 10).until(
-    EC.element_to_be_clickable(
-        (By.XPATH, "/html/body/table/tbody/tr/td/table[2]/tbody/tr/td[2]/table/tbody/tr/td[4]/table/tbody/tr/td[2]"))
-)
+try:
+    # Wait until the element is present and clickable
+    patient_intake = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable(
+            (By.XPATH,
+             "/html/body/table/tbody/tr/td/table[2]/tbody/tr/td[2]/table/tbody/tr/td[4]/table/tbody/tr/td[2]"))
+    )
 
-# Click the element
-patient_intake.click()
+    # Click the element
+    patient_intake.click()
+    logger.info("Clicked on patient intake")
+except Exception as e:
+    logger.error(f"Error clicking on patient intake:\n {e}")
 
 time.sleep(3)
-# check the month reprot
-if len(costumers) > 0:
-    month = str(costumers[0]["month"])
-    year = str(costumers[0]["year"])
-    if len(month) == 1:
-        month = "0" + month
-    if len(year) == 2:
-        year = "20" + year
+try:
+    # check the month reprot
+    if len(costumers) > 0:
+        month = str(costumers[0]["month"])
+        year = str(costumers[0]["year"])
+        if len(month) == 1:
+            month = "0" + month
+        if len(year) == 2:
+            year = "20" + year
 
-    print("month = ", month , "year = " , year)
-    date = month + "/" + year
-    month_report = Select(driver.find_element("id", "month"))
-    month_report.select_by_visible_text(date)
+        print("month = ", month, "year = ", year)
+        date = month + "/" + year
+        month_report = Select(driver.find_element("id", "month"))
+        month_report.select_by_visible_text(date)
 
-# open extend option
-# extend = driver.find_element(By.XPATH,
-#                              "/html/body/center/table/tbody/tr/td/table/tbody/tr/td[6]/a/u")
-wait = WebDriverWait(driver, 10)
-extend = wait.until(EC.presence_of_element_located((By.XPATH, "//u[text()='הוספה ברצף']")))
-extend.click()
+    wait = WebDriverWait(driver, 10)
+    extend = wait.until(EC.presence_of_element_located((By.XPATH, "//u[text()='הוספה ברצף']")))
+    extend.click()
+    logger.info("Extended the report page")
 
-# insert patient
-number_of_inserts = len(costumers)
+    # insert patient
+    number_of_inserts = len(costumers)
 
-functions.clear_col(XL_path, did_reported_col, number_of_inserts)
+    functions.clear_col(XL_path, did_reported_col, number_of_inserts)
+    logger.info("Cleared the reported columns in the XL")
+    if number_of_inserts > 0:
 
-if number_of_inserts > 0:
-    current_patient = costumers[0]
-
-    for j in range(0, number_of_inserts):
-        try:
-            time.sleep(1.5)
+        for j in range(0, number_of_inserts):
             current_patient = costumers[j]
-
-            id_element = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "ID1")))
-            date_element = driver.find_element(By.ID, "treatmentDate1")
-            date_element.clear()
-            id_element.clear()
-
-            # fill up id
-            id_element.send_keys(current_patient["id"])
-
-            # fill up date
-            day = str(current_patient["day"])
-            if len(day) == 1:
-                day = "0" + day
-            month = str(current_patient["month"])
-            if len(month) == 1:
-                month = "0" + month
-
-            date_element.send_keys(day + "/" + month + "/" + str(current_patient["year"]))
-
-            # fill up treatment
-            treatment_picker = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.ID, "treatmentDescr1")))
-            driver.execute_script("arguments[0].click();", treatment_picker)
             try:
-                treatment = WebDriverWait(driver, 10).until(
-                    EC.any_of(
-                        EC.presence_of_element_located(
-                            (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[2]/td")),
-                        EC.presence_of_element_located(
-                            (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[3]/td"))
+                time.sleep(1.5)
+                logger.info("Current patient: " + str(current_patient["id"]))
 
-                    )
-                )
-                treatment.click()
-            except:
-                treatment = WebDriverWait(driver, 10).until(
-                    EC.any_of(
-                        EC.presence_of_element_located(
-                            (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[3]/td")),
-                        EC.presence_of_element_located(
-                            (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[2]/td"))
-                    )
-                )
-                treatment.click()
+                id_element = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "ID1")))
+                date_element = driver.find_element(By.ID, "treatmentDate1")
+                date_element.clear()
+                id_element.clear()
+                logger.info("id and date cleared")
 
-            # Find left over treatments
-            time.sleep(0.2)
-            left_over_element = driver.find_element("id", "fromField1")
-            left_over_treatments = left_over_element.get_attribute("value")
-            if debug:
-                print(f"left over treatments for {current_patient['id']}: {left_over_treatments}")
+                # fill up id
+                id_element.send_keys(current_patient["id"])
+                logger.info("id filled")
 
-            # check for error:
-            try:
-                error_message_element = driver.find_element(By.ID, "ErrorMessageId")
-                error_message_text = error_message_element.text
-                if "לא" in error_message_text:
-                    raise Exception(f"Error message: {error_message_text}")
-            except NoSuchElementException:
-                pass  # Do nothing if the element is not found
+                # fill up date
+                day = str(current_patient["day"])
+                if len(day) == 1:
+                    day = "0" + day
+                month = str(current_patient["month"])
+                if len(month) == 1:
+                    month = "0" + month
 
-            # click on save
-            save_button = driver.find_element("id", "imgSave")
-            save_button.click()
+                date_element.send_keys(day + "/" + month + "/" + str(current_patient["year"]))
 
-            # click on enter
-            time.sleep(1)
-            pyautogui.press("enter")
+                logger.info("date filled")
 
-            # wait for the data to be updated
-            while True:
+                # fill up treatment
+                treatment_picker = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.ID, "treatmentDescr1")))
+                driver.execute_script("arguments[0].click();", treatment_picker)
                 try:
-                    id_element = driver.find_element(By.ID, "ID1")
-                    break
+                    treatment = WebDriverWait(driver, 10).until(
+                        EC.any_of(
+                            EC.presence_of_element_located(
+                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[2]/td")),
+                            EC.presence_of_element_located(
+                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[3]/td"))
+
+                        )
+                    )
+                    treatment.click()
+                    logger.info("treatment selected")
                 except:
-                    time.sleep(2)
+                    logger.info("treatment falid 1 time, tring again...")
+                    treatment = WebDriverWait(driver, 10).until(
+                        EC.any_of(
+                            EC.presence_of_element_located(
+                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[3]/td")),
+                            EC.presence_of_element_located(
+                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[2]/td"))
+                        )
+                    )
+                    treatment.click()
+                    logger.info("treatment selected")
 
-            pyautogui.press("enter")
+                # Find left over treatments
+                time.sleep(0.4)
+                left_over_element = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "fromField1")))
+                logger.info("left over treatment element found")
+                left_over_treatments = left_over_element.get_attribute("value")
 
-            # update the Excel
-            for r in current_patient["rows"]:
-                functions.write_to_excel(XL_path, r, did_reported_col, "V")
-                functions.write_to_excel(XL_path, r, left_over_treatment_col, left_over_treatments)
+                if debug:
+                    print(f"left over treatments for {current_patient['id']}: {left_over_treatments}")
 
+                # check for error:
+                logger.info("checking for error message")
+                try:
+                    error_message_element = driver.find_element(By.ID, "ErrorMessageId")
+                    error_message_text = error_message_element.text
+                    if "לא" in error_message_text:
+                        logger.info(f"Error message found: {error_message_text}")
+                        raise Exception(f"Error message: {error_message_text}")
+                except NoSuchElementException:
+                    pass  # Do nothing if the element is not found
 
+                # click on save
+                save_button = driver.find_element("id", "imgSave")
+                save_button.click()
+                logger.info("Save button clicked")
 
-        except:
-            # update the Excel
-            for r in current_patient["rows"]:
-                functions.write_to_excel(XL_path, r, did_reported_col, "X")
-                driver.refresh()
+                # click on enter
                 time.sleep(1)
                 pyautogui.press("enter")
+                logger.info("Enter key pressed (for clicking the pop up)")
 
-# Close the browser
-driver.quit()
+                # wait for the data to be updated
+                while True:
+                    try:
+                        id_element = driver.find_element(By.ID, "ID1")
+                        break
+                    except:
+                        time.sleep(2)
+                logger.info("Data updated")
+                pyautogui.press("enter")
+                logger.info("Enter key pressed (for clicking the pop up) #2")
+
+                # update the Excel
+                try:
+                    logger.info("updating the Excel...")
+                    for r in current_patient["rows"]:
+                        functions.write_to_excel(XL_path, r, did_reported_col, "V")
+                        functions.write_to_excel(XL_path, r, left_over_treatment_col, left_over_treatments)
+                        logger.info(f"updated row {r} with V in column did_reported and {left_over_treatments} in column left_over_treatment")
+                except Exception as e:
+                    logger.error(
+                        f'Error updating Excel in rows {", ".join(str(r) for r in current_patient["rows"])}: {e}')
+
+
+
+
+            except Exception as e:
+                logger.error(f"Error with patient {current_patient['id']}: {e}")
+                # update the Excel
+                for r in current_patient["rows"]:
+                    functions.write_to_excel(XL_path, r, did_reported_col, "X")
+                    driver.refresh()
+                    time.sleep(1)
+                    pyautogui.press("enter")
+finally:
+    # Close the browser
+    driver.quit()
