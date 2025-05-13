@@ -21,7 +21,7 @@ import logger
 
 
 
-logger = logger.setup_logger()
+logger = logger.setup_logger("CLALIT")
 alon = False
 clear_xl = True
 # base_path = r"C:\Users\alons\Downloads\files_for_clalit"
