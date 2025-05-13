@@ -123,7 +123,7 @@ def process_excel(file_path, base_path="/"):
                     # push the dup one day later
                     new_date = customers[j]["date"] + timedelta(days=1)
                     # if the month is different, push it to the previous day
-                    if customers[i]["month"] != customers[j]["date"].month:
+                    if customers[i]["month"] != new_date.month :
                         new_date =  customers[j]["date"] - timedelta(days=1)
                     customers[j]["date"] = new_date
                     customers[j]["day"] = new_date.day
@@ -185,29 +185,6 @@ def write_to_excel(file_path, row, col, txt):
 def clear_col(file_path, col, end_of_col):
     for i in range(2, end_of_col + 2):
         write_to_excel(file_path, i, col, "")
-
-
-def clear_table(driver, start, end):
-    # for j in range(start, end):
-    #     id_element = driver.find_element(By.ID, "ID" + str(j))
-    #     date_element = driver.find_element(By.ID, "treatmentDate" + str(j))
-    #     department = driver.find_element(By.ID, "department" + str(j))
-    #
-    #     date_element.clear()
-    #
-    #     id_element.clear()
-    #
-    #     department = Select(department)
-    #     department.select_by_value("999999999")
-    #
-    #     treatment_picker = WebDriverWait(driver, 10).until(
-    #         EC.element_to_be_clickable((By.ID, "treatmentDescr" + str(j))))
-    #     treatment_picker.click()
-    #     treatment_option = WebDriverWait(driver, 2).until(
-    #         EC.element_to_be_clickable((By.ID, "9999999999")))
-    #     treatment_option.click()
-
-    driver.refresh()
 
 
 def extract_date(alert_content):

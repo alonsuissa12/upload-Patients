@@ -12,7 +12,7 @@ import pandas as pd
 import os
 import random
 import functions
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, InvalidArgumentException
 from Clalit_GUI import get_basic_info
 import logging
 import os
@@ -24,6 +24,7 @@ import logger
 logger = logger.setup_logger("CLALIT")
 alon = False
 clear_xl = True
+waiting_limit  = 200 # in seconds
 # base_path = r"C:\Users\alons\Downloads\files_for_clalit"
 # base_path = r"C:\Users\alons\Downloads\files_for_clalit"
 base_path, XL_path, report, upload_files, login_password = get_basic_info()
@@ -74,6 +75,10 @@ if report or upload_files:
     try:
         driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
         logger.info("driver set up")
+        time.sleep(1)
+        # click enter to deal with the pop up
+        pyautogui.press("enter")
+
     except:
         logger.error("error with opening driver or log-in")
         functions.write_to_excel(XL_path, 1, error_col, "error with opening driver or log-in")
@@ -155,17 +160,11 @@ if report:
                 functions.write_to_excel(XL_path, costumer["row"], error_col, "error with filling id")
                 logger.error(f"error with filling id {repr(e)}")
                 raise e
-            # Locate the family name element
-            family_name_element = driver.find_element(By.ID, "ctl00_MainContent_txtInsuredFamily")
-            logger.info("found family name element")
-            first_name_element = driver.find_element(By.ID, "ctl00_MainContent_txtInsuredName")
-            logger.info("found first name element")
 
-            # Check if the input field is empty
-            if family_name_element.get_attribute("value") == "":
-                logger.info("family name field is empty. filling it now...")
-                family_name_element.send_keys(costumer["last_name"])
-                first_name_element.send_keys(costumer["first_name"])
+
+
+            # family_name_element.send_keys(costumer["last_name"])
+            # first_name_element.send_keys(costumer["first_name"])
 
             # Wait for and select provider
             # Wait for dropdown arrow to be clickable
@@ -282,6 +281,21 @@ if report:
                 functions.write_to_excel(XL_path, costumer["row"], error_col, "error with selecting day")
                 raise e
 
+            #change the names
+            # Locate the family name element
+            family_name_element = driver.find_element(By.ID, "ctl00_MainContent_txtInsuredFamily")
+            logger.info("found family name element")
+            # locate the first name element
+            first_name_element = driver.find_element(By.ID, "ctl00_MainContent_txtInsuredName")
+            logger.info("found first name element")
+
+            logger.info("clearing names")
+            driver.execute_script("arguments[0].value = '';", family_name_element)
+            driver.execute_script("arguments[0].value = '';", first_name_element)
+            # Fill the input fields with the values from the Excel file
+            logger.info("filling names")
+            driver.execute_script("arguments[0].value = arguments[1];", family_name_element, costumer["last_name"])
+            driver.execute_script("arguments[0].value = arguments[1];", first_name_element, costumer["first_name"])
             #  send
             try:
                 send_report_button = wait.until(
@@ -345,7 +359,7 @@ if report:
                     if words and words[0] == "מספר":
                         counter += 1
                         logger.info("found the word מספר")
-                        if counter >= 80:
+                        if counter >= waiting_limit/2:
                             logger.error("timeout error - TOO MUCH TIME")
                             raise TimeoutError("עבר יותר מדי זמן ולא נמצאה הודעת אישור")
                     elif words[1] == "נדחתה":
