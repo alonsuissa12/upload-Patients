@@ -81,7 +81,6 @@ def process_excel(file_path,config, base_path="/"):
 
             if base_path != "/":
                 match = re.search(r"\d{4,}", file_name)
-                print("2386493463916107130731049731073-32-23-3370327923629376932")
                 if match:
                     extracted_number = match.group()
                     print("match", extracted_number)
