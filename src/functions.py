@@ -1,23 +1,18 @@
-from multiprocessing.reduction import duplicate
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 from datetime import datetime, timedelta
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
-import pyautogui
 import pandas as pd
 import re
 import os
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
-from selenium.webdriver.support.ui import Select
+from config import Config
+
 
 debug = False
-
 
 def set_up_driver(link):
     # Set up WebDriver
@@ -45,21 +40,19 @@ def set_up_full_log_in(link, name, password, verification):
     return driver
 
 
+import os
+
 def find_file_with_number(base_path, extracted_number):
     for root, dirs, files in os.walk(base_path):
         for file in files:
-            file_path = os.path.join(root, file)
-            try:
-                with open(file_path, 'r') as f:
-                    content = f.read()
-                    if str(extracted_number) in content:
-                        return os.path.join(base_path, file)  # Return the path of the file containing the number
-            except Exception as e:
-                print(f"Error reading {file}: {e}")
-    return None  # If no file is found
+            if str(extracted_number) in file:
+                file_path = os.path.join(root, file)
+                return os.path.normpath(file_path)  # Normalize to system default
+    return None
 
 
-def process_excel(file_path, base_path="/"):
+
+def process_excel(file_path,config, base_path="/"):
     customers = []
     print("working on:")
 
@@ -70,17 +63,25 @@ def process_excel(file_path, base_path="/"):
 
         for index, row in df.iterrows():
             # Check if column A (index 0) is empty
-            if pd.isna(row[2]):  # Check if column A (first column) is empty
+            if pd.isna(row[config.id_col]):  # Check if column A (first column) is empty
                 break  # Exit the loop
 
             # Get values from the row
-            id_value = row[2]  # ID from column C (index 2)
-            date_value = row[3]  # Date from column D (index 3)
-            file_name = row[4]  # File name from column E (index 4)
-            first_name = row[0]
-            last_name = row[1]
+            id_value = row[config.id_col]  # ID from column C (index 2)
+            date_value = row[config.date_col]  # Date from column D (index 3)
+            file_name = row[config.receipt_col]  # File name from column E (index 4)
+            first_name = row[config.first_name_col]
+            last_name = row[config.last_name_col]
+            if pd.isna(row[config.new_approval_file_col]):
+                referral = ""
+                need_new_referral = False
+            else:
+                referral = str(row[config.new_approval_file_col])
+                need_new_referral = referral != ""
+
             if base_path != "/":
                 match = re.search(r"\d{4,}", file_name)
+                print("2386493463916107130731049731073-32-23-3370327923629376932")
                 if match:
                     extracted_number = match.group()
                     print("match", extracted_number)
@@ -101,8 +102,9 @@ def process_excel(file_path, base_path="/"):
                 "file": file_name,
                 "rows": [index + 2],  # Initialize rows list with the first occurrence
                 "first_name": first_name,
-                "last_name": last_name
-
+                "last_name": last_name,
+                "need_referral": need_new_referral,
+                "referral" : referral
             })
 
             print(
@@ -148,6 +150,7 @@ def get_unique_customers(customer_list):
 
 
 def write_to_excel(file_path, row, col, txt):
+    col = col + 1  # Adjust column index for openpyxl (1-based)
     try:
         # Load the existing Excel file
         if debug:

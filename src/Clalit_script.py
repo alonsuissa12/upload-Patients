@@ -18,18 +18,18 @@ import logging
 import os
 from datetime import datetime
 import logger
+from Clalit_Helper_Functions import upload_Referral, upload_file
+from config import Config
 
-
-
+config = Config("clalit")
 logger = logger.setup_logger("CLALIT")
+
+base_path, config.XL_path, report, upload_files, login_password = get_basic_info()
+logger.info(f"got info from GUI:\n base_path: {base_path}\n XL_path: {config.XL_path}\n report: {report}\n upload_files: {upload_files}\n login_password: {'*' * len(login_password)}")
+
+# ----------------- config variables -----------------
 alon = False
 clear_xl = True
-waiting_limit  = 200 # in seconds
-# base_path = r"C:\Users\alons\Downloads\files_for_clalit"
-# base_path = r"C:\Users\alons\Downloads\files_for_clalit"
-base_path, XL_path, report, upload_files, login_password = get_basic_info()
-logger.info(f"got info from GUI:\n base_path: {base_path}\n XL_path: {XL_path}\n report: {report}\n upload_files: {upload_files}\n login_password: {'*' * len(login_password)}")
-
 if alon:
     open_calander_x = 800
     open_calander_y = 585
@@ -37,18 +37,27 @@ else:
     open_calander_x = 570
     open_calander_y = 700
 
-login_name = "sm81471"
-login_verification = "123"
-site_link = "https://portalsapakim.mushlam.clalit.co.il/Mushlam/Login.aspx?ReturnUrl=%2fMushlam"
-did_file_upload_col = 7
-did_reported_col = 6
-left_over_treatment_col = 8
-need_new_approval_col = 9
-error_col = 10
+XL_path = config.XL_path
+waiting_limit  = config.wait_time_limit
+login_name = config.login_name
+login_verification = config.login_verification
+site_link = config.site_link
+first_name_col = config.first_name_col
+last_name_col = config.last_name_col
+id_col = config.id_col
+date_col = config.date_col
+receipt_col =config.receipt_col
+did_reported_col = config.did_reported_col
+did_file_upload_col = config.did_file_upload_col
+left_over_treatment_col = config.left_over_treatment_col
+need_new_approval_col = config.need_new_approval_col
+error_col = config.error_col
+new_approval_file_col = config.new_approval_file_col
 
+#------------------ main code -----------------
 # Loop through each row starting from line 2 (index 1 in pandas)
 try:
-    costumers = functions.process_excel(XL_path)
+    costumers = functions.process_excel(XL_path,config, base_path)
     logger.info(f"Found {len(costumers)} customers to process from excel.")
 except:
     logger.error("error while tried to process excel")
@@ -467,11 +476,11 @@ if upload_files:
         day = costumer["day"]
         year = costumer["year"]
         month = costumer["month"]
-        file = costumer["file"]
-        full_path = os.path.abspath(str(os.path.join(base_path, file)))
+        full_path = costumer["file"]
+        # full_path = os.path.abspath(str(os.path.join(base_path, file)))
         logger.info(f"looking for file: {full_path}")
         full_path_try2 = full_path + ".pdf"
-        full_path = full_path + "_tc.pdf"
+        # full_path = full_path + "_tc.pdf"
 
 
         try:
@@ -546,32 +555,21 @@ if upload_files:
                 if not checkbox.is_selected():
                     checkbox.click()
             logger.info("clicked checkboxes")
-            # Switch to the iframe
-            iframe = wait.until(EC.presence_of_element_located((By.ID, "ifrFiles")))
-            driver.switch_to.frame(iframe)
-            logger.info("switched to iframe")
 
-            # Wait for iframe content to load
-            time.sleep(3)
+            # upload the file
+            logger.info("uploading receipt...")
+            if upload_file(driver, current_customer, full_path, full_path_try2, logger, config, 1) == -1:
+                logger.info("error with uploading receipt")
+                raise Exception("failed uploading receipt")
 
-            # Find the hidden file input field
-            file_input = wait.until(EC.presence_of_element_located((By.ID, "fileToUpload1")))
-            logger.info("found file input box")
 
-            time.sleep(2)
-            logger.info(f"sending file: {full_path}")
-            #normalized_path = os.path.abspath(str(full_path))
-            try:
-                file_input.send_keys(str(full_path))
-            except InvalidArgumentException() as e:
-                logger.info(f"error with sending file: {repr(e)} trying the path {full_path_try2}")
-                file_input.send_keys(str(full_path_try2))
-            except Exception as e:
-                logger.info(f"error with sending file: {repr(e)}")
-                functions.write_to_excel(XL_path, costumer["row"], error_col, "error with sending file")
-                raise e
-            logger.info(f"sent file")
-            time.sleep(2)
+            # upload the referral (if needed)
+            if upload_Referral(current_customer, driver,logger,base_path,config) == -1:
+                logger.info("error with uploading referral")
+                raise Exception("failed uploading referral")
+
+
+
 
             # scroll down
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")

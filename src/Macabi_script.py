@@ -1,46 +1,46 @@
-from numpy.f2py.auxfuncs import throw_error
 from selenium.common import NoSuchElementException
-from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
-from datetime import datetime
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 import time
-from selenium.webdriver.common.action_chains import ActionChains
 import pyautogui
-import pandas as pd
-import os
 import functions
 from Macabi_GUI import get_basic_info2
 import logger
+from config import Config
+from src.Clalit_script import XL_path
+
+config = Config("macabi")
 
 # -------- logger --------
 logger = logger.setup_logger("MACABI")
 
+#--------- GUI --------
+config.XL_path, config.login_password = get_basic_info2()
+
 # -------- config variables --------
 debug = False
 
-login_id = "126280"
-login_password = ""
-provider_type = "5"
-provider_code = "24657"
-site_link = "https://wmsup.mac.org.il/mbills"
-did_reported_col = 6
-left_over_treatment_col = 7
-need_new_approval_col = 8
+login_id = config.login_id
+login_password = config.login_password
+provider_type = config.provider_type
+provider_code = config.provider_code
+site_link = config.site_link
+did_reported_col = config.did_reported_col
+left_over_treatment_col = config.left_over_treatment_col
+need_new_approval_col = config.need_new_approval_col
+XL_path = config.XL_path
 
 # --------- main code ---------
 
 logger.info("Starting script")
 
-XL_path, login_password = get_basic_info2()
+
 
 logger.info("Excel path: " + XL_path)
 
-costumers = functions.process_excel(XL_path)
+costumers = functions.process_excel(XL_path,config)
 logger.info("Number of patients: " + str(len(costumers)))
 
 driver = functions.set_up_driver(site_link)
