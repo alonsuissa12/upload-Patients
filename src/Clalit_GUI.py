@@ -33,7 +33,7 @@ def submit(root, password_entry, report_var, upload_files_var):
     if not login_password:
         messagebox.showwarning("⚠ Warning", "Password is required!")
         return
-    if not base_path:
+    if upload_files and (not base_path):
         messagebox.showwarning("⚠ Warning", "Please select a base folder.")
         return
     if not excel_path:
@@ -46,7 +46,7 @@ def submit(root, password_entry, report_var, upload_files_var):
                         f"Excel File: {excel_path}\n"
                         f"Report: {'Yes' if report else 'No'}\n"
                         f"Upload Files: {'Yes' if upload_files else 'No'}\n"
-                        f"Password: {'*' * len(login_password)}")
+                        f"Password: {login_password}")
 
     root.destroy()  # Close the GUI after submission
 

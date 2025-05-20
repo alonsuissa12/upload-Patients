@@ -1,46 +1,27 @@
 import json
-
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
-from datetime import datetime
-from selenium.webdriver.common.keys import Keys
-import time
-from selenium.webdriver.common.action_chains import ActionChains
 import pyautogui
-import pandas as pd
-import os
 import random
 import functions
-from selenium.common.exceptions import TimeoutException, InvalidArgumentException
 from Clalit_GUI import get_basic_info
-import logging
-import os
-from datetime import datetime
 import logger
 from Clalit_Helper_Functions import upload_Referral, upload_file
-from config import Config
 
+from config import Config
 config = Config("clalit")
 logger = logger.setup_logger("CLALIT")
-
 base_path, config.XL_path, report, upload_files, login_password = get_basic_info()
-logger.info(f"got info from GUI:\n base_path: {base_path}\n XL_path: {config.XL_path}\n report: {report}\n upload_files: {upload_files}\n login_password: {'*' * len(login_password)}")
+logger.info(
+    f"got info from GUI:\n base_path: {base_path}\n XL_path: {config.XL_path}\n report: {report}\n upload_files: {upload_files}\n login_password: {'*' * len(login_password)}")
 
 # ----------------- config variables -----------------
-alon = False
 clear_xl = True
-if alon:
-    open_calander_x = 800
-    open_calander_y = 585
-else:
-    open_calander_x = 570
-    open_calander_y = 700
 
 XL_path = config.XL_path
-waiting_limit  = config.wait_time_limit
+waiting_limit = config.wait_time_limit
 login_name = config.login_name
 login_verification = config.login_verification
 site_link = config.site_link
@@ -48,7 +29,7 @@ first_name_col = config.first_name_col
 last_name_col = config.last_name_col
 id_col = config.id_col
 date_col = config.date_col
-receipt_col =config.receipt_col
+receipt_col = config.receipt_col
 did_reported_col = config.did_reported_col
 did_file_upload_col = config.did_file_upload_col
 left_over_treatment_col = config.left_over_treatment_col
@@ -56,10 +37,10 @@ need_new_approval_col = config.need_new_approval_col
 error_col = config.error_col
 new_approval_file_col = config.new_approval_file_col
 
-#------------------ main code -----------------
+# ------------------ main code -----------------
 # Loop through each row starting from line 2 (index 1 in pandas)
 try:
-    costumers = functions.process_excel(XL_path,config, base_path)
+    costumers = functions.process_excel(XL_path, config, base_path)
     logger.info(f"Found {len(costumers)} customers to process from excel.")
 except:
     logger.error("error while tried to process excel")
@@ -105,7 +86,6 @@ if report or upload_files:
         driver.quit()
         quit(1)
 
-
 reported = []
 if report:
     logger.info("starting report")
@@ -128,7 +108,7 @@ if report:
                 logger.info("clicked report filing button")
 
             except RuntimeError as e:
-                logger.error(f"error with clicking -  הגשת תביעות   not found (run time) { repr(e)}")
+                logger.error(f"error with clicking -  הגשת תביעות   not found (run time) {repr(e)}")
                 functions.write_to_excel(XL_path, costumer["row"], error_col,
                                          "error with clicking -  הגשת תביעות   not found (run time)")
                 raise e
@@ -159,8 +139,6 @@ if report:
                 logger.error(f"error with filling id {repr(e)}")
                 raise e
 
-
-
             # family_name_element.send_keys(costumer["last_name"])
             # first_name_element.send_keys(costumer["first_name"])
 
@@ -177,7 +155,6 @@ if report:
                 # Scroll into view if necessary
                 driver.execute_script("arguments[0].scrollIntoView();", dropdown_arrow)
                 logger.info("scrolled into view")
-
 
                 # Try clicking the dropdown arrow
                 try:
@@ -196,7 +173,6 @@ if report:
                 # value is like '[{"value":"81471","val01":"…","val04":"…", …}, …]'
                 providers = json.loads(raw)
                 provider_names = [p["val04"].strip() for p in providers if p.get("val04", "").strip()]
-
 
                 # Randomly select a provider
                 chosen_provider = random.choice(provider_names)
@@ -219,9 +195,15 @@ if report:
             ###################
             #    DATE         #
             # #################
-
-            pyautogui.moveTo(open_calander_x, open_calander_y)
-            pyautogui.click()
+            try:
+                dp = driver.find_element(By.XPATH,
+                                         "/html/body/center/table/tbody/tr/td/form[1]/table/tbody/tr/td[2]/div/table/tbody/tr[6]/td/div/table/tbody/tr[2]/td[2]/table/tbody/tr[2]/td/table/tbody/tr[1]/td[2]/span[1]/img")
+                driver.execute_script("arguments[0].click();", dp)
+                time.sleep(3)
+            except Exception as e:
+                print(repr(e))
+                print(e)
+                raise e
 
             wait = WebDriverWait(driver, 10)
 
@@ -233,7 +215,7 @@ if report:
                 year_option = wait.until(EC.visibility_of_element_located(
                     (By.XPATH, f'//*[@id="ui-datepicker-div"]/div/div/select[2]/option[@value="{str(year)}"]')
                 ))
-                logger.info(f"found selected year { year_option}")
+                logger.info(f"found selected year {year_option}")
                 year_option.click()
                 logger.info("clicked selected year")
             except Exception as e:
@@ -289,7 +271,7 @@ if report:
                 functions.write_to_excel(XL_path, costumer["row"], error_col, "error with selecting day")
                 raise e
 
-            #change the names
+            # change the names
             # Locate the family name element
             family_name_element = driver.find_element(By.ID, "ctl00_MainContent_txtInsuredFamily")
             logger.info("found family name element")
@@ -355,7 +337,6 @@ if report:
                         # Click the 'סגור' button
                         close_button.click()
 
-
                         logger.info("closing alert of new approval need")
                         functions.write_to_excel(XL_path, costumer["row"], need_new_approval_col, alert_date)
                         loop_traker = 2
@@ -367,7 +348,7 @@ if report:
                     if words and words[0] == "מספר":
                         counter += 1
                         logger.info("found the word מספר")
-                        if counter >= waiting_limit/2:
+                        if counter >= waiting_limit / 2:
                             logger.error("timeout error - TOO MUCH TIME")
                             raise TimeoutError("עבר יותר מדי זמן ולא נמצאה הודעת אישור")
                     elif words[1] == "נדחתה":
@@ -378,7 +359,7 @@ if report:
                             logger.info("found the words קיימת כבר")
                             # still try to report
                             reported.append(costumer)
-                            functions.write_to_excel(XL_path, costumer["row"], error_col,extracted_text)
+                            functions.write_to_excel(XL_path, costumer["row"], error_col, extracted_text)
                             functions.write_to_excel(XL_path, costumer["row"], did_reported_col, "V (קיימת כבר)")
                         break
 
@@ -392,7 +373,8 @@ if report:
                                 index = words.index("למבוטח") + 1
                                 left_over_treatments = words[index]
 
-                                logger.info(f"successfully reported for: {id} in date:{day}/{month}/{year}. left over treatments: {left_over_treatments}")
+                                logger.info(
+                                    f"successfully reported for: {id} in date:{day}/{month}/{year}. left over treatments: {left_over_treatments}")
 
                                 # update the Excel
                                 functions.write_to_excel(XL_path, costumer["row"], left_over_treatment_col,
@@ -407,8 +389,6 @@ if report:
 
                 functions.write_to_excel(XL_path, costumer["row"], error_col, "error with processing system messages")
                 raise e
-
-
 
             try:
                 main_button = wait.until(
@@ -432,12 +412,6 @@ if report:
             driver.quit()
 
             driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
-
-
-
-
-
-
 
 if upload_files:
     logger.info("\n-------------------- UPLOADING FILES --------------------\n")
@@ -480,7 +454,6 @@ if upload_files:
         logger.info(f"looking for file: {full_path}")
         full_path_try2 = full_path + ".pdf"
         # full_path = full_path + "_tc.pdf"
-
 
         try:
             wait = WebDriverWait(driver, 10)
@@ -525,7 +498,7 @@ if upload_files:
             # Try clicking and then sending keys
             input_ID_element.click()
             input_ID_element.clear()
-            driver.execute_script("arguments[0].value = arguments[1];",input_ID_element,str(id))
+            driver.execute_script("arguments[0].value = arguments[1];", input_ID_element, str(id))
 
             logger.info(f"entered ID: {id}")
 
@@ -561,14 +534,10 @@ if upload_files:
                 logger.info("error with uploading receipt")
                 raise Exception("failed uploading receipt")
 
-
             # upload the referral (if needed)
-            if upload_Referral(current_customer, driver,logger,base_path,config) == -1:
+            if upload_Referral(current_customer, driver, logger, base_path, config) == -1:
                 logger.info("error with uploading referral")
                 raise Exception("failed uploading referral")
-
-
-
 
             # scroll down
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -616,6 +585,3 @@ if upload_files:
 
 logger.info("DONE")
 driver.quit()
-
-
-
