@@ -1,3 +1,5 @@
+import json
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -103,19 +105,6 @@ if report or upload_files:
         driver.quit()
         quit(1)
 
-# Providers to select from
-# todo: make it dynamic
-provider_names = [
-    "אמסלם דוד",
-    "גולדפלד דינה חוה",
-    "גלינסקי חיה",
-    "גנז בני",
-    "וילנסקי צוריאל אהרון",
-    "זילקוביץ ישראל",
-    "כהן רבקה",
-    "לוי דניאל",
-    "רובינס רבקה"
-]
 
 reported = []
 if report:
@@ -189,6 +178,7 @@ if report:
                 driver.execute_script("arguments[0].scrollIntoView();", dropdown_arrow)
                 logger.info("scrolled into view")
 
+
                 # Try clicking the dropdown arrow
                 try:
                     dropdown_arrow.click()
@@ -197,6 +187,15 @@ if report:
                     logger.error("Selenium click failed. Trying JavaScript click...")
                     driver.execute_script("arguments[0].click();", dropdown_arrow)
                     logger.info("JavaScript click successful")
+
+                # 1. Grab the hidden‐input’s value and parse it
+                hid = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "ctl00_MainContent_hidSubSuppliers"))
+                )
+                raw = hid.get_attribute("value")
+                # value is like '[{"value":"81471","val01":"…","val04":"…", …}, …]'
+                providers = json.loads(raw)
+                provider_names = [p["val04"].strip() for p in providers if p.get("val04", "").strip()]
 
 
                 # Randomly select a provider
