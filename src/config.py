@@ -23,6 +23,7 @@ class Config(object):
             self.site_link = "https://portalsapakim.mushlam.clalit.co.il/Mushlam/Login.aspx?ReturnUrl=%2fMushlam"
             self.wait_time_limit = 200 # seconds
             self.model = "clalit"
+
         else: # model == "macabi"
             self.login_id = "126280"
             self.login_password = ""
