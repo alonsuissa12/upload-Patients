@@ -81,14 +81,14 @@ def upload_file(driver, patient, file_path, file_path_try_2, logger, config, fil
         logger.info(f"error with switching to iframe(not stopping the process): {repr(e)} ")
 
     # Wait for iframe content to load
-    time.sleep(3)
+    time.sleep(1)
 
     # Find the hidden file input field
     file_box = f"fileToUpload{file_box_int}"
     file_input = wait.until(EC.presence_of_element_located((By.ID, file_box)))
     logger.info("found file input box")
 
-    time.sleep(2)
+    time.sleep(1)
     logger.info(f"sending file: {file_path}")
     try:
         file_input.send_keys(str(file_path))
@@ -104,6 +104,6 @@ def upload_file(driver, patient, file_path, file_path_try_2, logger, config, fil
         write_to_excel(config.XL_path, patient["row"], config.error_col, "error with sending file")
         return -1
     logger.info(f"sent file")
-    time.sleep(2)
+    time.sleep(0.5)
 
     return 0

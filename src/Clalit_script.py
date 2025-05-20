@@ -21,21 +21,8 @@ logger.info(
 clear_xl = True
 
 XL_path = config.XL_path
-waiting_limit = config.wait_time_limit
-login_name = config.login_name
-login_verification = config.login_verification
-site_link = config.site_link
-first_name_col = config.first_name_col
-last_name_col = config.last_name_col
-id_col = config.id_col
-date_col = config.date_col
-receipt_col = config.receipt_col
 did_reported_col = config.did_reported_col
-did_file_upload_col = config.did_file_upload_col
-left_over_treatment_col = config.left_over_treatment_col
-need_new_approval_col = config.need_new_approval_col
 error_col = config.error_col
-new_approval_file_col = config.new_approval_file_col
 
 # ------------------ main code -----------------
 # Loop through each row starting from line 2 (index 1 in pandas)
@@ -49,9 +36,9 @@ except:
 try:
     if clear_xl:
         functions.clear_col(XL_path, did_reported_col, len(costumers))
-        functions.clear_col(XL_path, did_file_upload_col, len(costumers))
-        functions.clear_col(XL_path, left_over_treatment_col, len(costumers))
-        functions.clear_col(XL_path, need_new_approval_col, len(costumers))
+        functions.clear_col(XL_path, config.did_file_upload_col, len(costumers))
+        functions.clear_col(XL_path, config.left_over_treatment_col, len(costumers))
+        functions.clear_col(XL_path, config.need_new_approval_col, len(costumers))
         functions.clear_col(XL_path, error_col, len(costumers))
         logger.info("cleared all columns")
 
@@ -65,7 +52,7 @@ except:
 driver = 0
 if report or upload_files:
     try:
-        driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
+        driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password, config.login_verification)
         logger.info("driver set up")
         time.sleep(1)
         # click enter to deal with the pop up
@@ -199,7 +186,6 @@ if report:
                 dp = driver.find_element(By.XPATH,
                                          "/html/body/center/table/tbody/tr/td/form[1]/table/tbody/tr/td[2]/div/table/tbody/tr[6]/td/div/table/tbody/tr[2]/td[2]/table/tbody/tr[2]/td/table/tbody/tr[1]/td[2]/span[1]/img")
                 driver.execute_script("arguments[0].click();", dp)
-                time.sleep(3)
             except Exception as e:
                 print(repr(e))
                 print(e)
@@ -301,8 +287,10 @@ if report:
             try:
                 loop_traker = 0
                 counter = 0
+                sleep_time = 2
                 while loop_traker < 2:
-                    time.sleep(2)
+
+                    time.sleep(sleep_time)
 
                     # Wait for the element to be present in the DOM
                     message = WebDriverWait(driver, 20).until(
@@ -338,7 +326,7 @@ if report:
                         close_button.click()
 
                         logger.info("closing alert of new approval need")
-                        functions.write_to_excel(XL_path, costumer["row"], need_new_approval_col, alert_date)
+                        functions.write_to_excel(XL_path, costumer["row"], config.need_new_approval_col, alert_date)
                         loop_traker = 2
 
                     except Exception as e:
@@ -348,7 +336,7 @@ if report:
                     if words and words[0] == "מספר":
                         counter += 1
                         logger.info("found the word מספר")
-                        if counter >= waiting_limit / 2:
+                        if counter >= config.wait_time_limit / sleep_time:
                             logger.error("timeout error - TOO MUCH TIME")
                             raise TimeoutError("עבר יותר מדי זמן ולא נמצאה הודעת אישור")
                     elif words[1] == "נדחתה":
@@ -377,7 +365,7 @@ if report:
                                     f"successfully reported for: {id} in date:{day}/{month}/{year}. left over treatments: {left_over_treatments}")
 
                                 # update the Excel
-                                functions.write_to_excel(XL_path, costumer["row"], left_over_treatment_col,
+                                functions.write_to_excel(XL_path, costumer["row"], config.left_over_treatment_col,
                                                          str(left_over_treatments))
                             reported.append(costumer)
                             did_report = True
@@ -411,7 +399,7 @@ if report:
                     functions.write_to_excel(XL_path, r, did_reported_col, "X")
             driver.quit()
 
-            driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
+            driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password, config.login_verification)
 
 if upload_files:
     logger.info("\n-------------------- UPLOADING FILES --------------------\n")
@@ -571,16 +559,16 @@ if upload_files:
             logger.info(f"ERROR UPLOADING FILES FOR  {id} ")
             logger.error(repr(e))
             driver.quit()
-            driver = functions.set_up_full_log_in(site_link, login_name, login_password, login_verification)
+            driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password, config.login_verification)
         finally:
             if current_customer != 0:
                 for r in current_customer["rows"]:
                     if file_uploaded:
                         logger.info(f"Writing to excel - V ,for {id}")
-                        functions.write_to_excel(XL_path, r, did_file_upload_col, "V")
+                        functions.write_to_excel(XL_path, r, config.did_file_upload_col, "V")
                     else:
                         logger.info(f"Writing to excel - X ,for {id}")
-                        functions.write_to_excel(XL_path, r, did_file_upload_col, "X")
+                        functions.write_to_excel(XL_path, r, config.did_file_upload_col, "X")
                 current_customer = 0
 
 logger.info("DONE")
