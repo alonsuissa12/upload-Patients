@@ -4,12 +4,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 from datetime import datetime, timedelta
-import pandas as pd
+from pandas import ExcelFile, read_excel, isna
 import re
-import os
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
-from config import Config
 
 
 debug = False
@@ -58,12 +56,12 @@ def process_excel(file_path,config, base_path="/"):
 
     try:
         # Load the Excel file with specific column types
-        with pd.ExcelFile(file_path, engine='openpyxl') as xls:
-            df = pd.read_excel(xls, dtype={2: str, 4: str})  # Read with column types
+        with ExcelFile(file_path, engine='openpyxl') as xls:
+            df = read_excel(xls, dtype={2: str, 4: str})  # Read with column types
 
         for index, row in df.iterrows():
             # Check if column A (index 0) is empty
-            if pd.isna(row[config.id_col]):  # Check if column A (first column) is empty
+            if isna(row[config.id_col]):  # Check if column A (first column) is empty
                 break  # Exit the loop
 
             # Get values from the row
@@ -72,7 +70,7 @@ def process_excel(file_path,config, base_path="/"):
             file_name = row[config.receipt_col]  # File name from column E (index 4)
             first_name = row[config.first_name_col]
             last_name = row[config.last_name_col]
-            if pd.isna(row[config.new_approval_file_col]):
+            if isna(row[config.new_approval_file_col]):
                 referral = ""
                 need_new_referral = False
             else:

@@ -10,16 +10,6 @@ from Clalit_GUI import get_basic_info
 import logger
 from Clalit_Helper_Functions import upload_Referral, upload_file,choose_provider_index
 from config import Config
-import subprocess
-import sys
-import os
-
-# --------------------- check for updates ---------------------
-# Path to the main app (main.py)
-main_app_path = os.path.join(os.path.dirname(__file__), "main.py")
-
-# Run main.py with the same Python interpreter
-subprocess.run([sys.executable, main_app_path])
 
 # -------------------- config --------------------
 config = Config("clalit")
