@@ -162,7 +162,7 @@ if report:
                 provider_names = [p["val04"].strip() for p in providers if p.get("val04", "").strip()]
 
                 # Randomly select a provider
-                chosen_provider = provider_names[choose_provider_index(id)]
+                chosen_provider = provider_names[choose_provider_index(id), len(provider_names)]
                 logger.info(f"selected provider: {chosen_provider}")
                 provider_option = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), '{chosen_provider}')]"))

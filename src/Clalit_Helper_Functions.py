@@ -108,6 +108,10 @@ def upload_file(driver, patient, file_path, file_path_try_2, logger, config, fil
 
     return 0
 
-# choose the provider by the last number in the id
-def choose_provider_index(id):
-    return int(str(id)[-1])
+# choose the provider by the digit sum of the id
+def choose_provider_index(id, providers_count = 13):
+    sum_digits = 0
+    while( id > 0):
+        sum_digits += id % 10
+        id //= 10
+    return sum_digits % providers_count

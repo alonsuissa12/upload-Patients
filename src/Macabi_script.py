@@ -107,7 +107,7 @@ except Exception as e:
 
 time.sleep(3)
 try:
-    # check the month reprot
+    # check the month report
     if len(costumers) > 0:
         month = str(costumers[0]["month"])
         year = str(costumers[0]["year"])
