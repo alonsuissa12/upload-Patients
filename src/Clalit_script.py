@@ -8,7 +8,7 @@ import random
 import functions
 from Clalit_GUI import get_basic_info
 import logger
-from Clalit_Helper_Functions import upload_Referral, upload_file
+from Clalit_Helper_Functions import upload_Referral, upload_file,choose_provider_index
 
 from config import Config
 config = Config("clalit")
@@ -162,7 +162,7 @@ if report:
                 provider_names = [p["val04"].strip() for p in providers if p.get("val04", "").strip()]
 
                 # Randomly select a provider
-                chosen_provider = random.choice(provider_names)
+                chosen_provider = provider_names[choose_provider_index(id)]
                 logger.info(f"selected provider: {chosen_provider}")
                 provider_option = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), '{chosen_provider}')]"))

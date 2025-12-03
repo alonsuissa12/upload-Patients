@@ -107,3 +107,7 @@ def upload_file(driver, patient, file_path, file_path_try_2, logger, config, fil
     time.sleep(0.5)
 
     return 0
+
+# choose the provider by the last number in the id
+def choose_provider_index(id):
+    return int(str(id)[-1])
