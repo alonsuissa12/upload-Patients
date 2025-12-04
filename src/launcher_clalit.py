@@ -4,7 +4,7 @@ import sys
 import requests
 from packaging import version
 
-VERSION_URL = "https://raw.githubusercontent.com/alonsuissa12/upload-Patients/master/dist/local_version.txt"
+VERSION_URL = "https://raw.githubusercontent.com/alonsuissa12/upload-Patients/master/dist/local_version_clalit.txt"
 LATEST_API = "https://api.github.com/repos/alonsuissa12/upload-Patients/releases/latest"
 
 def get_local_version(version_file):
@@ -28,7 +28,7 @@ def get_latest_url():
 
 def main():
     base = os.path.dirname(sys.argv[0])
-    version_file = os.path.join(base, "local_version.txt")
+    version_file = os.path.join(base, "local_version_clalit.txt")
     local_version = get_local_version(version_file)
 
     print("looking for updates...")
