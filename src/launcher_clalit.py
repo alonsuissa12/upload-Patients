@@ -4,7 +4,7 @@ import sys
 import requests
 from packaging import version
 
-VERSION_URL = "https://raw.githubusercontent.com/alonsuissa12/upload-Patients/master/version.txt"
+VERSION_URL = "https://raw.githubusercontent.com/alonsuissa12/upload-Patients/master/dist/local_version.txt"
 LATEST_API = "https://api.github.com/repos/alonsuissa12/upload-Patients/releases/latest"
 
 def get_local_version(version_file):
@@ -22,7 +22,7 @@ def write_local_version(version_file, new_version):
 def get_latest_url():
     data = requests.get(LATEST_API).json()
     for asset in data["assets"]:
-        if asset["name"] == "main_app.exe":
+        if asset["name"] == "clalit.exe":
             return asset["browser_download_url"]
     return None
 
@@ -31,11 +31,12 @@ def main():
     version_file = os.path.join(base, "local_version.txt")
     local_version = get_local_version(version_file)
 
+    print("looking for updates...")
     remote_ver = requests.get(VERSION_URL).text.strip()
 
     base = os.path.dirname(sys.argv[0])
     updater = os.path.join(base, "updater.exe")
-    main_app = os.path.join(base, "main_app.exe")
+    main_app = os.path.join(base, "clalit.exe")
 
     if version.parse(remote_ver) > version.parse(local_version):
         print("🔔 Update found:", remote_ver)
