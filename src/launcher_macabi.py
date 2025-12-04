@@ -22,7 +22,7 @@ def write_local_version(version_file, new_version):
 def get_latest_url():
     data = requests.get(LATEST_API).json()
     for asset in data["assets"]:
-        if asset["name"] == "clalit.exe":
+        if asset["name"] == "macabi.exe":
             return asset["browser_download_url"]
     return None
 
@@ -36,7 +36,7 @@ def main():
 
     base = os.path.dirname(sys.argv[0])
     updater = os.path.join(base, "updater.exe")
-    main_app = os.path.join(base, "clalit.exe")
+    main_app = os.path.join(base, "macabi.exe")
 
     if version.parse(remote_ver) > version.parse(local_version):
         print("🔔 Update found:", remote_ver)
