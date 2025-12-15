@@ -2,11 +2,13 @@ import os
 import time
 
 from selenium.common import InvalidArgumentException
-
+import json
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from functions import write_to_excel
+
+from src import functions
+from src.functions import write_to_excel
 
 
 def upload_Referral(patient, driver, logger, base_path, config):
@@ -111,7 +113,139 @@ def upload_file(driver, patient, file_path, file_path_try_2, logger, config, fil
 # choose the provider by the digit sum of the id
 def choose_provider_index(id, providers_count = 13):
     sum_digits = 0
-    while( id > 0):
+    id = int(id)
+    while id > 0:
         sum_digits += id % 10
         id //= 10
     return sum_digits % providers_count
+
+def select_and_click_provider(logger,driver,output_XL_path,row,error_col,costumer_id):
+    # Wait for and select provider
+    # Wait for dropdown arrow to be clickable
+    try:
+        time.sleep(1)
+        dropdown_arrow = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "css-b3yrsp-indicatorContainer"))
+        )
+        logger.info("found dropdown arrow")
+        time.sleep(1)
+
+        # Scroll into view if necessary
+        driver.execute_script("arguments[0].scrollIntoView();", dropdown_arrow)
+        logger.info("scrolled into view")
+
+        # Try clicking the dropdown arrow
+        try:
+            dropdown_arrow.click()
+            logger.info("clicked dropdown arrow")
+        except:
+            logger.error("Selenium click failed. Trying JavaScript click...")
+            driver.execute_script("arguments[0].click();", dropdown_arrow)
+            logger.info("JavaScript click successful")
+
+        #  Grab the hidden‐input’s value (suppliers) and parse it
+        hid = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "ctl00_MainContent_hidSubSuppliers"))
+        )
+        raw = hid.get_attribute("value")
+        # value is like '[{"value":"81471","val01":"…","val04":"…", …}, …]'
+        providers = json.loads(raw)
+        provider_names = [p["val04"].strip() for p in providers if p.get("val04", "").strip()]
+
+        # Randomly select a provider
+        chosen_provider = provider_names[choose_provider_index(costumer_id, len(provider_names))]
+        logger.info(f"selected provider: {chosen_provider}")
+        provider_option = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), '{chosen_provider}')]"))
+        )
+        logger.info("found selected provider")
+        time.sleep(0.5)
+        try:
+            provider_option.click()
+            logger.info("clicked selected provider")
+        except Exception as e:
+            logger.error("failed to click selected provider")
+            raise e
+    except Exception as e:
+        functions.write_to_excel(output_XL_path, row, error_col, "error with selecting provider")
+        raise e
+
+def select_date(logger,driver,output_XL_path,error_col,current_patient):
+   try:
+       day = current_patient["day"]
+       year = current_patient["year"]
+       month = current_patient["month"]
+
+       dp = driver.find_element(By.XPATH,
+                                "/html/body/center/table/tbody/tr/td/form[1]/table/tbody/tr/td[2]/div/table/tbody/tr[6]/td/div/table/tbody/tr[2]/td[2]/table/tbody/tr[2]/td/table/tbody/tr[1]/td[2]/span[1]/img")
+       driver.execute_script("arguments[0].click();", dp)
+   except Exception as e:
+       print(repr(e))
+       print(e)
+       raise e
+
+   wait = WebDriverWait(driver, 10)
+
+   # choose year:
+   try:
+       select_year = wait.until(
+           EC.visibility_of_element_located((By.XPATH, f'//*[@id="ui-datepicker-div"]/div/div/select[2]')))
+       select_year.click()
+       year_option = wait.until(EC.visibility_of_element_located(
+           (By.XPATH, f'//*[@id="ui-datepicker-div"]/div/div/select[2]/option[@value="{str(year)}"]')
+       ))
+       logger.info(f"found selected year {year_option}")
+       year_option.click()
+       logger.info("clicked selected year")
+   except Exception as e:
+       logger.error(f"error with selecting year (or openning calander) {repr(e)}")
+       functions.write_to_excel(output_XL_path, current_patient["row"], error_col,
+                                "error with selecting year (or openning calander)")
+       raise e
+
+   # choose month:
+   try:
+       month = int(month) - 1
+       select_month = wait.until(
+           EC.visibility_of_element_located((By.XPATH, f'/html/body/div[7]/div/div/select[1]')))
+       logger.info(f"found selected month {select_month}")
+       select_month.click()
+       logger.info("clicked selected month")
+
+       month_option = wait.until(EC.visibility_of_element_located(
+           (By.XPATH, f'//select[@class="ui-datepicker-month"]/option[@value="{str(month)}"]')
+       ))
+
+       # Click on the desired month option
+       month_option.click()
+       logger.info("clicked month option")
+   except Exception as e:
+       logger.error(f"error with selecting month {repr(e)}")
+       functions.write_to_excel(output_XL_path, current_patient["row"], error_col, "error with selecting month")
+       raise e
+
+   try:
+       calendar_body = wait.until(
+           EC.visibility_of_element_located((By.XPATH, '//*[@id="ui-datepicker-div"]/table/tbody')))
+       td_elements = calendar_body.find_elements(By.XPATH, './/td')
+       logger.info("found calendar body")
+       while True:
+           # Re-locate all 'td' elements to avoid StaleElementReferenceException
+           td_elements = calendar_body.find_elements(By.XPATH, './/td')
+
+           for td in td_elements:
+               if td.text == str(day):
+                   logger.info(f"found matching day: {td.text}")
+                   # Click the element with the matching text
+                   td.click()
+                   logger.info("clicked matching day")
+                   break
+               else:
+                   # If no match is found, wait for a moment and try again
+                   time.sleep(0.7)
+                   continue
+           break  # Exit the loop if we found and clicked the element
+   except Exception as e:
+       logger.error(f"error with selecting day {repr(e)}")
+       functions.write_to_excel(output_XL_path, current_patient["row"], error_col, "error with selecting day")
+       raise e
