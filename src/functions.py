@@ -78,7 +78,7 @@ def process_excel(file_path,config, base_path="/"):
                 referral = str(row[config.new_approval_file_col])
                 need_new_referral = referral != ""
 
-            if base_path != "/":
+            if base_path != "/"  and isinstance(file_name, str) and file_name.strip() != "":
                 match = re.search(r"\d{4,}", file_name)
                 if match:
                     extracted_number = match.group()
