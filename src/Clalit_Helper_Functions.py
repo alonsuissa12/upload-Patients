@@ -3,7 +3,7 @@ import time
 
 from selenium.common import InvalidArgumentException
 import json
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -175,10 +175,10 @@ def select_date(logger,driver,output_XL_path,error_col,current_patient):
        day = current_patient["day"]
        year = current_patient["year"]
        month = current_patient["month"]
-
        dp = driver.find_element(By.XPATH,
-                                "/html/body/center/table/tbody/tr/td/form[1]/table/tbody/tr/td[2]/div/table/tbody/tr[6]/td/div/table/tbody/tr[2]/td[2]/table/tbody/tr[2]/td/table/tbody/tr[1]/td[2]/span[1]/img")
+                                "/html/body/center/table/tbody/tr/td/form[1]/table/tbody/tr/td[2]/div/table/tbody/tr[6]/td/div/table/tbody/tr[2]/td[2]/table/tbody/tr[4]/td[2]/span[1]/img")
        driver.execute_script("arguments[0].click();", dp)
+
    except Exception as e:
        print(repr(e))
        print(e)
@@ -249,3 +249,9 @@ def select_date(logger,driver,output_XL_path,error_col,current_patient):
        logger.error(f"error with selecting day {repr(e)}")
        functions.write_to_excel(output_XL_path, current_patient["row"], error_col, "error with selecting day")
        raise e
+
+
+def select_care_type(driver, value="6"):
+    select_elem = driver.find_element(By.ID, "ctl00_MainContent_lstCareType")
+    select = Select(select_elem)
+    select.select_by_value(value)

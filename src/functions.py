@@ -4,10 +4,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 from datetime import datetime, timedelta
-from pandas import ExcelFile, read_excel, isna
+from pandas import ExcelFile, read_excel, isna,DataFrame
 import re
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
+from pathlib import Path
 
 
 debug = False
@@ -101,7 +102,15 @@ def process_excel(file_path,config, base_path="/"):
                 "first_name": first_name,
                 "last_name": last_name,
                 "need_referral": need_new_referral,
-                "referral" : referral
+                "referral" : referral,
+                "write_to_excel": {config.first_name_col : first_name,
+                                   config.last_name_col: last_name,
+                                   config.id_col: id_value,
+                                   config.date_col: date_value,
+                                   config.did_reported_col: "X",
+                                   config.receipt_col: "X",
+                                   config.error_col: "",
+                                   }
             })
 
             print(
@@ -150,21 +159,12 @@ def write_to_excel(file_path, row, col, txt):
     col = col + 1  # Adjust column index for openpyxl (1-based)
     try:
         # Load the existing Excel file
-        if debug:
-            print("STEP 1")
         wb = load_workbook(file_path)
-        if debug:
-            print("STEP 2")
         sheet = wb.active  # Get the active sheet
-        if debug:
-            print("STEP 3")
         # Write the text to the specified cell
         cell = sheet.cell(row=row, column=col)
-        if debug:
-            print("STEP 4")
         cell.value = txt
-        if debug:
-            print("STEP 5")
+
 
         # Center align the text in the cell
         cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -180,6 +180,48 @@ def write_to_excel(file_path, row, col, txt):
         print(f"Error: The file '{file_path}' was not found.")
     except Exception as e:
         print(f"An error occurred: {repr(e)}")
+
+def write_many_to_excel(file_path, writes): # todo: problem in this function!
+    """
+    writes: iterable of (row, col, txt)
+    col is 0-based
+    """
+    wb = load_workbook(file_path)
+    sheet = wb.active
+
+    for row, col, txt in writes:
+        sheet.cell(row=row, column=col + 1).value = txt
+
+    wb.save(file_path)
+
+def update_customer_writing(customer, cols, texts):
+    for i in range(len(cols)):
+        customer["write_to_excel"][cols[i]] = texts[i]
+
+
+def write_customer_to_excel(file_path, customer):
+    row = customer["row"]
+
+    writes = [
+        (row, col, value)
+        for col, value in customer["write_to_excel"].items()
+    ]
+
+    write_many_to_excel(file_path, writes)
+
+def write_customer_to_excel_few_rows(customer,cols,output_xl_path):
+    rows = customer["rows"]
+    writes = []
+    write_map = customer.get("write_to_excel", {})
+    for r in rows:
+        for c in cols:
+            if c in write_map:
+                writes.append((r, c,write_map[c]))
+
+    if writes:
+        write_many_to_excel(output_xl_path, writes)
+
+
 
 
 def clear_col(file_path, col, end_of_col):
@@ -202,3 +244,41 @@ def extract_date(alert_content):
     date_pattern = r"\b\d{2}/\d{2}/\d{4}\b"
     match = re.search(date_pattern, alert_txt)
     return match.group() if match else None
+
+
+def copy_headers_by_index(input_xl_path, output_xl_path, header_indexes):
+    """
+    Creates an output Excel file and copies selected column headers
+    from the input Excel by column indexes (0-based).
+
+    :param input_xl_path: path to input Excel file
+    :param output_xl_path: path to output Excel file (will be created)
+    :param header_indexes: list of column indexes (0-based)
+    """
+
+    input_xl_path = Path(input_xl_path)
+    output_xl_path = Path(output_xl_path)
+
+    if not input_xl_path.exists():
+        raise FileNotFoundError(f"Input Excel not found: {input_xl_path}")
+
+    # Ensure output directory exists
+    output_xl_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Read only headers (no data)
+    df = read_excel(input_xl_path, nrows=0)
+
+    # Validate indexes
+    max_index = len(df.columns) - 1
+    invalid = [i for i in header_indexes if i < 0 or i > max_index]
+    if invalid:
+        raise IndexError(f"Invalid column indexes: {invalid}")
+
+    # Extract selected headers
+    selected_headers = [df.columns[i] for i in header_indexes]
+
+    # Create empty DataFrame with selected headers
+    out_df = DataFrame(columns=selected_headers)
+
+    # Create the Excel file
+    out_df.to_excel(output_xl_path, index=False)
