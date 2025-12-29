@@ -20,15 +20,18 @@ logger.info(
     f"got info from GUI:\n base_path: {base_path}\n XL_path: {config.XL_path}\n report: {report}\n upload_files: {upload_files}\n login_password: {'*' * len(login_password)}")
 
 # ----------------- config variables -----------------
-clear_xl = False
-
-XL_path = config.XL_path
-input_XL_path = XL_path
-base, ext = os.path.splitext(XL_path)
-now = datetime.now().strftime("%Y_%m_%d_%H_%M")
-output_XL_path = f"{base}_output_{now}{ext}"
-did_reported_col = config.did_reported_col
-error_col = config.error_col
+try:
+    clear_xl = False
+    XL_path = config.XL_path
+    input_XL_path = XL_path
+    base, ext = os.path.splitext(XL_path)
+    now = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    output_XL_path = f"{base}_output_{now}{ext}"
+    did_reported_col = config.did_reported_col
+    error_col = config.error_col
+except Exception as e:
+    logger.error(f"error with config variables: \n\t {repr(e)}")
+    quit(1)
 
 # ------------------ main code -----------------
 # Loop through each row starting from line 2 (index 1 in pandas)
@@ -40,9 +43,14 @@ except:
     report = 0
     upload_files = 0
 
-# copy the headlines from the input excel:
-copy_headers_by_index(input_XL_path, output_XL_path,[0,1,2,3,5,6,7,8,9,11,12])
 
+# copy the headlines from the input excel:
+try:
+    copy_headers_by_index(input_XL_path, output_XL_path,[0,1,2,3,5,6,7,8,9,11,12])
+except:
+    logger.error("error while tried to copy headers to output excel")
+    report = 0
+    upload_files = 0
 
 # set up driver
 driver = 0
