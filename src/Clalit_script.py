@@ -139,8 +139,6 @@ if report:
 
             select_date(logger,driver,output_XL_path,error_col,costumer)
 
-
-
             # change the names
             # Locate the family name element
             family_name_element = driver.find_element(By.ID, "ctl00_MainContent_txtInsuredFamily")

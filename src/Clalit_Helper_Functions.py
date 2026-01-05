@@ -172,7 +172,7 @@ def select_and_click_provider(logger,driver,output_XL_path,row,error_col,costume
 
 def select_date(logger,driver,output_XL_path,error_col,current_patient):
    try:
-       day = current_patient["day"]
+       day = str(current_patient["day"])
        year = current_patient["year"]
        month = current_patient["month"]
        dp = driver.find_element(By.XPATH,
@@ -234,7 +234,7 @@ def select_date(logger,driver,output_XL_path,error_col,current_patient):
            td_elements = calendar_body.find_elements(By.XPATH, './/td')
 
            for td in td_elements:
-               if td.text == str(day):
+               if td.text == day:
                    logger.info(f"found matching day: {td.text}")
                    # Click the element with the matching text
                    td.click()
