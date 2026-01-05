@@ -123,12 +123,17 @@ def select_and_click_provider(logger,driver,output_XL_path,row,error_col,costume
     # Wait for and select provider
     # Wait for dropdown arrow to be clickable
     try:
-        time.sleep(1)
+        time.sleep(0.2)
         dropdown_arrow = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.CLASS_NAME, "css-b3yrsp-indicatorContainer"))
+            EC.presence_of_element_located((By.CLASS_NAME, "css-b3yrsp-indicatorContainer"))
         )
         logger.info("found dropdown arrow")
-        time.sleep(1)
+        time.sleep(0.2)
+
+        driver.execute_script(
+            "arguments[0].scrollIntoView({block: 'center', inline: 'center'});",
+            dropdown_arrow
+        )
 
         # Scroll into view if necessary
         driver.execute_script("arguments[0].scrollIntoView();", dropdown_arrow)
