@@ -35,6 +35,8 @@ class Config(object):
             self.site_link = "https://wmsup.mac.org.il/mbills"
             self.left_over_treatment_col = 6
             self.need_new_approval_col = 7
+            self.error_col = 8
+
             self.model = "macabi"
 
 

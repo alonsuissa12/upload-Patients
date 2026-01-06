@@ -71,7 +71,7 @@ def process_excel(file_path,config, base_path="/"):
             file_name = row[config.receipt_col]  # File name from column E (index 4)
             first_name = row[config.first_name_col]
             last_name = row[config.last_name_col]
-            if isna(row[config.new_approval_file_col]):
+            if config.model == "macabi" or isna(row[config.new_approval_file_col]):
                 referral = ""
                 need_new_referral = False
             else:
@@ -112,6 +112,7 @@ def process_excel(file_path,config, base_path="/"):
                                    config.error_col: "",
                                    }
             })
+
 
             print(
                 f"           Row: {index + 2}, ID: {id_value}, Date: {date_value.day}-{date_value.month}-{date_value.year}, file: {file_name}")

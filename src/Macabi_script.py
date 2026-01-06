@@ -9,7 +9,6 @@ import functions
 from Macabi_GUI import get_basic_info2
 import logger
 from config import Config
-from src.Clalit_script import XL_path
 
 config = Config("macabi")
 
