@@ -71,19 +71,23 @@ def process_excel(file_path,config, base_path="/"):
             file_name = row[config.receipt_col]  # File name from column E (index 4)
             first_name = row[config.first_name_col]
             last_name = row[config.last_name_col]
-            if config.model == "macabi" or isna(row[config.new_approval_file_col]):
+            if config.model == "macabi":
                 referral = ""
                 need_new_referral = False
-            else:
-                referral = str(row[config.new_approval_file_col])
-                need_new_referral = referral != ""
+            else:  # clalit
+                if  isna(row[config.new_approval_file_col]):
+                    referral = ""
+                    need_new_referral = False
+                else:
+                    referral = str(row[config.new_approval_file_col])
+                    need_new_referral = referral != ""
 
-            if base_path != "/"  and isinstance(file_name, str) and file_name.strip() != "":
-                match = re.search(r"\d{4,}", file_name)
-                if match:
-                    extracted_number = match.group()
-                    print("match", extracted_number)
-                    file_name = find_file_with_number(base_path, extracted_number)
+                if base_path != "/"  and isinstance(file_name, str) and file_name.strip() != "":
+                    match = re.search(r"\d{4,}", file_name)
+                    if match:
+                        extracted_number = match.group()
+                        print("match", extracted_number)
+                        file_name = find_file_with_number(base_path, extracted_number)
 
             # Convert date string to datetime object if needed
             if isinstance(date_value, str):
@@ -108,14 +112,15 @@ def process_excel(file_path,config, base_path="/"):
                                    config.id_col: id_value,
                                    config.date_col: date_value,
                                    config.did_reported_col: "X",
-                                   config.receipt_col: "X",
                                    config.error_col: "",
                                    }
             })
-
+            if config.model == "clalit" and len(customers) > 0:
+                customers[-1]["write_to_excel"][config.receipt_col] = "x"
 
             print(
                 f"           Row: {index + 2}, ID: {id_value}, Date: {date_value.day}-{date_value.month}-{date_value.year}, file: {file_name}")
+
     except FileNotFoundError:
         print(f"Error: The file '{file_path}' was not found.")
     except PermissionError:

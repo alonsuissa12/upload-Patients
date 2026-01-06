@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+
 from selenium.common import NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -30,11 +33,19 @@ did_reported_col = config.did_reported_col
 left_over_treatment_col = config.left_over_treatment_col
 need_new_approval_col = config.need_new_approval_col
 XL_path = config.XL_path
+input_XL_path = XL_path
+base, ext = os.path.splitext(XL_path)
+now = datetime.now().strftime("%Y_%m_%d_%H_%M")
+output_XL_path = f"{base}_output_{now}{ext}"
 
 # --------- main code ---------
 
 logger.info("Starting script")
 
+try:
+    functions.copy_headers_by_index(input_XL_path, output_XL_path,[0,1,2,3,4,5,6,7])
+except:
+    logger.error("error while tried to copy headers to output excel")
 
 
 logger.info("Excel path: " + XL_path)
@@ -95,7 +106,7 @@ try:
     patient_intake = WebDriverWait(driver, 10).until(
         EC.element_to_be_clickable(
             (By.XPATH,
-             "/html/body/table/tbody/tr/td/table[2]/tbody/tr/td[2]/table/tbody/tr/td[4]/table/tbody/tr/td[2]"))
+             "/html/body/table/tbody/tr/td/table[2]/tbody/tr/td[2]/table/tbody/tr/td[4]/table/tbody/tr/td[2]")) # todo: dont use xpath
     )
 
     # Click the element
@@ -128,8 +139,6 @@ try:
     # insert patient
     number_of_inserts = len(costumers)
 
-    functions.clear_col(XL_path, did_reported_col, number_of_inserts)
-    logger.info("Cleared the reported columns in the XL")
     if number_of_inserts > 0:
 
         for j in range(0, number_of_inserts):
@@ -169,9 +178,9 @@ try:
                     treatment = WebDriverWait(driver, 10).until(
                         EC.any_of(
                             EC.presence_of_element_located(
-                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[2]/td")),
+                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[2]/td")), #todo: dont use xpath
                             EC.presence_of_element_located(
-                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[3]/td"))
+                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[3]/td"))#todo: dont use xpath
 
                         )
                     )
@@ -182,9 +191,9 @@ try:
                     treatment = WebDriverWait(driver, 10).until(
                         EC.any_of(
                             EC.presence_of_element_located(
-                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[3]/td")),
+                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[3]/td")),#todo: dont use xpath
                             EC.presence_of_element_located(
-                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[2]/td"))
+                                (By.XPATH, "/html/body/center/div[1]/div[1]/div[2]/table/tbody/tr[2]/td"))#todo: dont use xpath
                         )
                     )
                     treatment.click()
@@ -196,6 +205,13 @@ try:
                     EC.presence_of_element_located((By.ID, "fromField1")))
                 logger.info("left over treatment element found")
                 left_over_treatments = left_over_element.get_attribute("value")
+
+                try:
+                    functions.update_customer_writing(current_patient,[left_over_treatment_col],[left_over_treatments])
+                except Exception as e:
+                    logger.error(f"Error updating left over treatments in memory for patient {current_patient['id']}: {e}")
+                    functions.update_customer_writing(current_patient, [config.error_col],
+                                                      [repr(e)])
 
                 if debug:
                     print(f"left over treatments for {current_patient['id']}: {left_over_treatments}")
@@ -236,9 +252,9 @@ try:
                 try:
                     logger.info("updating the Excel...")
                     for r in current_patient["rows"]:
-                        functions.write_to_excel(XL_path, r, did_reported_col, "V")
-                        functions.write_to_excel(XL_path, r, left_over_treatment_col, left_over_treatments)
-                        logger.info(f"updated row {r} with V in column did_reported and {left_over_treatments} in column left_over_treatment")
+                        functions.update_customer_writing(current_patient,[did_reported_col],["V"])
+                        functions.write_customer_to_excel(output_XL_path,current_patient)
+                        logger.info(f"updated row {r} of {current_patient['id']} - V")
                 except Exception as e:
                     logger.error(
                         f'Error updating Excel in rows {", ".join(str(r) for r in current_patient["rows"])}: {e}')
@@ -250,7 +266,10 @@ try:
                 logger.error(f"Error with patient {current_patient['id']}: {e}")
                 # update the Excel
                 for r in current_patient["rows"]:
-                    functions.write_to_excel(XL_path, r, did_reported_col, "X")
+                    #functions.write_to_excel(XL_path, r, did_reported_col, "X") #tod
+                    functions.update_customer_writing(current_patient, [did_reported_col], ["x"])
+                    functions.update_customer_writing(current_patient, [config.error_col], [repr(e)])
+                    functions.write_customer_to_excel(output_XL_path, current_patient)
                     driver.refresh()
                     time.sleep(1)
                     pyautogui.press("enter")

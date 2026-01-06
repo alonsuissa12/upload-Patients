@@ -8,10 +8,11 @@ class Config(object):
         self.last_name_col = 1
         self.id_col = 2
         self.date_col = 3
-        self.receipt_col = 4
-
+        self.receipt_col = 4 # not really needed in macabi
         self.XL_path = ""
+
         if model == "clalit":
+            self.receipt_col = 4
             self.did_reported_col = 4
             self.did_file_upload_col = 5
             self.left_over_treatment_col = 6
@@ -27,15 +28,15 @@ class Config(object):
             self.model = "clalit"
 
         else: # model == "macabi"
-            self.did_reported_col = 5
+            self.did_reported_col = 4
             self.login_id = "126280"
             self.login_password = ""
             self.provider_type = "5"
             self.provider_code = "24657"
             self.site_link = "https://wmsup.mac.org.il/mbills"
-            self.left_over_treatment_col = 6
-            self.need_new_approval_col = 7
-            self.error_col = 8
+            self.left_over_treatment_col = 5
+            self.need_new_approval_col = 6
+            self.error_col = 7
 
             self.model = "macabi"
 
