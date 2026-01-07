@@ -201,10 +201,14 @@ try:
 
                 # Find left over treatments
                 time.sleep(0.4)
-                left_over_element = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.ID, "fromField1")))
-                logger.info("left over treatment element found")
-                left_over_treatments = left_over_element.get_attribute("value")
+                try:
+                    left_over_element = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.ID, "fromField1")))
+                    logger.info("left over treatment element found")
+                    left_over_treatments = left_over_element.get_attribute("value")
+                except Exception as e:
+                    logger.error(f"Error finding left over treatments for patient {current_patient['id']}: {e}")
+                    left_over_treatments = "??"
 
                 try:
                     functions.update_customer_writing(current_patient,[left_over_treatment_col],[left_over_treatments])
@@ -259,20 +263,21 @@ try:
                     logger.error(
                         f'Error updating Excel in rows {", ".join(str(r) for r in current_patient["rows"])}: {e}')
 
-
-
-
             except Exception as e:
-                logger.error(f"Error with patient {current_patient['id']}: {e}")
+                logger.error(f"Error with patient {current_patient['id']}: {repr(e)}")
                 # update the Excel
-                for r in current_patient["rows"]:
-                    #functions.write_to_excel(XL_path, r, did_reported_col, "X") #tod
-                    functions.update_customer_writing(current_patient, [did_reported_col], ["x"])
-                    functions.update_customer_writing(current_patient, [config.error_col], [repr(e)])
-                    functions.write_customer_to_excel(output_XL_path, current_patient)
-                    driver.refresh()
-                    time.sleep(1)
-                    pyautogui.press("enter")
+                try:
+                    for r in current_patient["rows"]:
+                        #functions.write_to_excel(XL_path, r, did_reported_col, "X") #tod
+                        functions.update_customer_writing(current_patient, [did_reported_col], ["x"])
+                        functions.update_customer_writing(current_patient, [config.error_col], [str(repr(e))])
+                        functions.write_customer_to_excel(output_XL_path, current_patient)
+                except Exception as e2:
+                    logger.error(
+                        f'Error updating Excel after failure: {repr(e2)}')
+                driver.refresh()
+                time.sleep(1)
+                pyautogui.press("enter")
 finally:
     # Close the browser
     driver.quit()
