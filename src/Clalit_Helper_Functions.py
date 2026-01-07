@@ -149,16 +149,29 @@ def select_and_click_provider(logger,driver,output_XL_path,row,error_col,costume
             logger.info("JavaScript click successful")
 
         #  Grab the hidden‐input’s value (suppliers) and parse it
-        hid = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "ctl00_MainContent_hidSubSuppliers"))
-        )
-        raw = hid.get_attribute("value")
-        # value is like '[{"value":"81471","val01":"…","val04":"…", …}, …]'
-        providers = json.loads(raw)
-        provider_names = [p["val04"].strip() for p in providers if p.get("val04", "").strip()]
+        try:
+            hid = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "ctl00_MainContent_hidSubSuppliers"))
+            )
+            raw = hid.get_attribute("value")
+            # value is like '[{"value":"81471","val01":"…","val04":"…", …}, …]'
+            providers = json.loads(raw)
+            provider_names = [p["val04"].strip() for p in providers if p.get("val04", "").strip()]
 
-        # Randomly select a provider
-        chosen_provider = provider_names[choose_provider_index(costumer_id, len(provider_names))]
+            length = len(provider_names)
+
+            # if length is not int or length is 0
+            if not isinstance(length, int) or length == 0:
+                logger.info("could not find length. choosing default ")
+                chosen_provider = provider_names[choose_provider_index(costumer_id)]
+            # Randomly select a provider
+            else:
+                chosen_provider = provider_names[choose_provider_index(costumer_id, len(provider_names))]
+        except Exception as e:
+            logger.error(f"error with getting providers list: {repr(e)}")
+            raise e
+
+
         logger.info(f"selected provider: {chosen_provider}")
         provider_option = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, f"//div[contains(text(), '{chosen_provider}')]"))
