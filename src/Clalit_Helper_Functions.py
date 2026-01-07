@@ -136,7 +136,7 @@ def select_and_click_provider(logger,driver,output_XL_path,row,error_col,costume
         )
 
         # Scroll into view if necessary
-        driver.execute_script("arguments[0].scrollIntoView();", dropdown_arrow)
+        #driver.execute_script("arguments[0].scrollIntoView();", dropdown_arrow)
         logger.info("scrolled into view")
 
         # Try clicking the dropdown arrow
