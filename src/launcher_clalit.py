@@ -47,8 +47,11 @@ def main():
 
         write_local_version(version_file, remote_ver)
 
-
-    subprocess.Popen([main_app])
+    subprocess.Popen(
+        [main_app],
+        cwd=os.path.dirname(main_app),
+        close_fds=True
+    )
 
 if __name__ == "__main__":
     main()

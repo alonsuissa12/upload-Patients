@@ -8,9 +8,11 @@ from datetime import datetime
 import functions
 from Clalit_GUI import get_basic_info
 import logger
-from Clalit_Helper_Functions import select_and_click_provider,upload_Referral, upload_file, select_date,select_care_type
+from Clalit_Helper_Functions import select_and_click_provider, upload_Referral, upload_file, select_date, \
+    select_care_type
 from config import Config
-from src.functions import copy_headers_by_index, write_to_excel, write_customer_to_excel,write_customer_to_excel_few_rows
+from src.functions import copy_headers_by_index, write_to_excel, write_customer_to_excel, \
+    write_customer_to_excel_few_rows
 
 # -------------------- config --------------------
 config = Config("clalit")
@@ -43,10 +45,9 @@ except:
     report = 0
     upload_files = 0
 
-
 # copy the headlines from the input excel:
 try:
-    copy_headers_by_index(input_XL_path, output_XL_path,[0,1,2,3,5,6,7,8,9,11,12])
+    copy_headers_by_index(input_XL_path, output_XL_path, [0, 1, 2, 3, 5, 6, 7, 8, 9, 11, 12])
 except:
     logger.error("error while tried to copy headers to output excel")
     report = 0
@@ -56,7 +57,8 @@ except:
 driver = 0
 if report or upload_files:
     try:
-        driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password, config.login_verification)
+        driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password,
+                                              config.login_verification)
         logger.info("driver set up")
         time.sleep(1)
         # click enter to deal with the pop up
@@ -101,7 +103,8 @@ if report:
 
             except RuntimeError as e:
                 logger.error(f"error with clicking -  הגשת תביעות   not found (run time) {repr(e)}")
-                functions.update_customer_writing(costumer,[error_col],["error with clicking -  הגשת תביעות   not found (run time)"])
+                functions.update_customer_writing(costumer, [error_col],
+                                                  ["error with clicking -  הגשת תביעות   not found (run time)"])
                 raise e
 
             except Exception as e:
@@ -130,14 +133,13 @@ if report:
                 logger.error(f"error with filling id {repr(e)}")
                 raise e
 
-
-            select_and_click_provider(logger,driver,output_XL_path,costumer["row"],error_col,id)
+            select_and_click_provider(logger, driver, output_XL_path, costumer["row"], error_col, id)
 
             ###################
             #    DATE         #
             # #################
 
-            select_date(logger,driver,output_XL_path,error_col,costumer)
+            select_date(logger, driver, output_XL_path, error_col, costumer)
 
             # change the names
             # Locate the family name element
@@ -190,7 +192,7 @@ if report:
                         EC.presence_of_element_located((By.XPATH,
                                                         "/html/body/center/table/tbody/tr/td/form[1]/table/tbody/tr/td[2]/div/table/tbody/tr[7]/td/div")))
                     logger.info("found system message")
-                    functions.update_customer_writing(costumer,[config.system_message_col],[message])
+                    functions.update_customer_writing(costumer, [config.system_message_col], [message])
                     # Store the extracted text in a string variable
                     try:
                         extracted_text = message.text
@@ -224,7 +226,7 @@ if report:
                         loop_traker = 2
 
                     except Exception as e:
-                        functions.update_customer_writing(costumer, [config.need_new_approval_col],["no"])
+                        functions.update_customer_writing(costumer, [config.need_new_approval_col], ["no"])
                         logger.info("did not find alert on approval (its ok)")
 
                     # Check if the first word is "מספר"
@@ -233,12 +235,12 @@ if report:
                         logger.info("found the word מספר")
                         if counter >= config.wait_time_limit / sleep_time:
                             logger.error("timeout error - TOO MUCH TIME")
-                            functions.update_customer_writing(costumer,[config.system_message_col],[extracted_text])
+                            functions.update_customer_writing(costumer, [config.system_message_col], [extracted_text])
                             raise TimeoutError("עבר יותר מדי זמן ולא נמצאה הודעת אישור")
                     elif words[1] == "נדחתה":
                         logger.info("found the word נדחתה")
                         # write X
-                        functions.update_customer_writing(costumer, [did_reported_col],["X (נדחתה)"])
+                        functions.update_customer_writing(costumer, [did_reported_col], ["X (נדחתה)"])
                         functions.update_customer_writing(costumer, [config.system_message_col], [extracted_text])
                         if "קיימת" in words and "כבר" in words:
                             logger.info("found the words קיימת כבר")
@@ -262,11 +264,12 @@ if report:
                                     f"successfully reported for: {id} in date:{day}/{month}/{year}. left over treatments: {left_over_treatments}")
 
                                 # update the Excel
-                                functions.update_customer_writing(costumer, [config.left_over_treatment_col],[str(left_over_treatments)])
+                                functions.update_customer_writing(costumer, [config.left_over_treatment_col],
+                                                                  [str(left_over_treatments)])
                             reported.append(costumer)
                             did_report = True
-                            functions.update_customer_writing(costumer, [config.system_message_col],[extracted_text])
-                            functions.update_customer_writing(costumer, [did_reported_col],["V"])
+                            functions.update_customer_writing(costumer, [config.system_message_col], [extracted_text])
+                            functions.update_customer_writing(costumer, [did_reported_col], ["V"])
 
             except Exception as e:
                 logger.error(f"error with system messages {repr(e)}")
@@ -276,7 +279,7 @@ if report:
             try:
                 # go back to main page
                 driver.execute_script(
-                    "__doPostBack('ctl00$MainButtons$cmdExit','');"
+                    "document.getElementById('ctl00_MainButtons_cmdExit').click();"
                 )
 
                 logger.info("clicked main button")
@@ -288,14 +291,18 @@ if report:
             functions.write_customer_to_excel(output_XL_path, costumer)
         except Exception as e:
             if not did_report:
-                logger.error(f"error with reporting for: {id} in date:{day}/{month}/{year}!!!!!!!!!!!!")
+                logger.error(f"error with reporting for: {id} in date:{day}/{month}/{year}! {repr(e)}")
                 if costumer["write_to_excel"][config.error_col] != "":
-                    functions.update_customer_writing(costumer, [error_col], [repr(e)])
+                    functions.update_customer_writing(costumer, [error_col], [str(repr(e))])
                 functions.update_customer_writing(costumer, [did_reported_col], ["X"])
-            functions.write_customer_to_excel(output_XL_path, costumer)
+            try:
+                functions.write_customer_to_excel(output_XL_path, costumer)
+            except:
+                logger.error("error with writing to excel after failed report, for:", costumer["id"])
             driver.quit()
 
-            driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password, config.login_verification)
+            driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password,
+                                                  config.login_verification)
 
 if upload_files:
     logger.info("\n-------------------- UPLOADING FILES --------------------\n")
@@ -421,7 +428,8 @@ if upload_files:
             # upload the referral (if needed)
             if upload_Referral(current_customer, driver, logger, base_path, config) == -1:
                 logger.info("error with uploading referral")
-                functions.update_customer_writing(current_customer,[error_col],[current_customer["write_to_excel"][error_col] + "\nerror with uploading referral"])
+                functions.update_customer_writing(current_customer, [error_col], [
+                    current_customer["write_to_excel"][error_col] + "\nerror with uploading referral"])
                 raise Exception("failed uploading referral")
 
             # scroll down
@@ -454,27 +462,27 @@ if upload_files:
 
         except Exception as e:
             logger.info(f"ERROR UPLOADING FILES FOR  {id} ")
-            functions.update_customer_writing(current_customer, [error_col], [current_customer["write_to_excel"][error_col] + "\n" + repr(e)])
+            functions.update_customer_writing(current_customer, [error_col],
+                                              [current_customer["write_to_excel"][error_col] + "\n" + repr(e)])
             logger.error(repr(e))
             driver.quit()
-            driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password, config.login_verification)
+            driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password,
+                                                  config.login_verification)
         finally:
             if current_customer != 0:
                 if file_uploaded:
                     logger.info(f"Writing to excel - V ,for {id}")
-                    functions.update_customer_writing(current_customer, [config.did_file_upload_col],["V"])
+                    functions.update_customer_writing(current_customer, [config.did_file_upload_col], ["V"])
                 else:
                     logger.info(f"Writing to excel - X ,for {id}")
                     functions.update_customer_writing(current_customer, [config.did_file_upload_col], ["X"])
                 if report:
-                    functions.write_customer_to_excel_few_rows(current_customer, [config.did_file_upload_col,config.is_referral_uploaded_col,error_col],output_XL_path)
+                    functions.write_customer_to_excel_few_rows(current_customer, [config.did_file_upload_col,
+                                                                                  config.is_referral_uploaded_col,
+                                                                                  error_col], output_XL_path)
                 else:
                     functions.write_customer_to_excel(output_XL_path, current_customer)
                 current_customer = 0
 
-
-
 logger.info("DONE")
 driver.quit()
-
-
