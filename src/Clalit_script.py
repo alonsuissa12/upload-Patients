@@ -11,8 +11,7 @@ import logger
 from Clalit_Helper_Functions import select_and_click_provider, upload_Referral, upload_file, select_date, \
     select_care_type
 from config import Config
-from src.functions import copy_headers_by_index, write_to_excel, write_customer_to_excel, \
-    write_customer_to_excel_few_rows
+from src.functions import copy_headers_by_index,stable_click, write_customer_to_excel,write_customer_to_excel_few_rows
 
 # -------------------- config --------------------
 config = Config("clalit")
@@ -95,10 +94,8 @@ if report:
         try:
             # Click "הגשת תביעות" (Submit Claims)
             try:
-                report_filing = WebDriverWait(driver, 20).until(
-                    EC.element_to_be_clickable((By.ID, "ctl00_MainContent_cmdNewClaim")))
-                logger.info("found report filing button")
-                report_filing.click()
+                logger.info("clicking report filing button")
+                stable_click(driver, (By.ID, "ctl00_MainContent_cmdNewClaim"), logger, timeout=30)
                 logger.info("clicked report filing button")
 
             except RuntimeError as e:
@@ -192,7 +189,7 @@ if report:
                         EC.presence_of_element_located((By.XPATH,
                                                         "/html/body/center/table/tbody/tr/td/form[1]/table/tbody/tr/td[2]/div/table/tbody/tr[7]/td/div")))
                     logger.info("found system message")
-                    functions.update_customer_writing(costumer, [config.system_message_col], [message])
+                    functions.update_customer_writing(costumer, [config.system_message_col], [message.text])
                     # Store the extracted text in a string variable
                     try:
                         extracted_text = message.text

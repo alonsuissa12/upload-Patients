@@ -13,6 +13,55 @@ from pathlib import Path
 
 debug = False
 
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import (
+    TimeoutException,
+    StaleElementReferenceException,
+    ElementClickInterceptedException,
+    ElementNotInteractableException,
+)
+
+def stable_click(driver, locator, logger, timeout=10, retries=3, post_wait=None):
+    """
+    locator example: (By.ID, "ctl00_MainContent_cmdNewClaim")
+    post_wait: optional function(driver) -> True when click succeeded
+    """
+    last_err = None
+
+    for attempt in range(1, retries + 1):
+        try:
+            el = WebDriverWait(driver, timeout).until(EC.presence_of_element_located(locator))
+
+            # scroll to center (prevents header/overlay issues)
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block:'center', inline:'center'});", el
+            )
+
+            # now wait for clickable (after scroll)
+            el = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable(locator))
+
+            try:
+                el.click()
+            except (ElementClickInterceptedException, ElementNotInteractableException):
+                logger.warning(f"Normal click failed, trying JS click (attempt {attempt})")
+                driver.execute_script("arguments[0].click();", el)
+
+            if post_wait:
+                WebDriverWait(driver, timeout).until(lambda d: post_wait(d))
+
+            return  # success
+
+        except (StaleElementReferenceException, ElementClickInterceptedException,
+                ElementNotInteractableException, TimeoutException) as e:
+            last_err = e
+            logger.warning(f"stable_click attempt {attempt} failed: {type(e).__name__}: {e}")
+
+    raise last_err
+
+
+
 def set_up_driver(link):
     # Set up WebDriver
     driver = webdriver.Chrome()
@@ -187,16 +236,25 @@ def write_to_excel(file_path, row, col, txt):
     except Exception as e:
         print(f"An error occurred: {repr(e)}")
 
-def write_many_to_excel(file_path, writes): # todo: problem in this function!
-    """
-    writes: iterable of (row, col, txt)
-    col is 0-based
-    """
+def _excel_safe_value(v):
+    if v is None:
+        return ""
+    # Selenium WebElement has these attrs; avoid importing selenium here if you want
+    if hasattr(v, "tag_name") and hasattr(v, "get_attribute"):
+        # choose what makes sense for your element:
+        return v.text or v.get_attribute("value") or v.get_attribute("innerText") or ""
+    # openpyxl supports: str, int, float, bool, datetime/date, None
+    if isinstance(v, (str, int, float, bool)):
+        return v
+    # fallback
+    return str(v)
+
+def write_many_to_excel(file_path, writes):
     wb = load_workbook(file_path)
     sheet = wb.active
 
     for row, col, txt in writes:
-        sheet.cell(row=row, column=col + 1).value = txt
+        sheet.cell(row=row, column=col + 1).value = _excel_safe_value(txt)
 
     wb.save(file_path)
 
