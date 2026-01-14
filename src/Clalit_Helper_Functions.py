@@ -111,12 +111,15 @@ def upload_file(driver, patient, file_path, file_path_try_2, logger, config, fil
     return 0
 
 # choose the provider by the digit sum of the id
-def choose_provider_index(id, providers_count = 13):
+def choose_provider_index(id_, providers_count = 13):
     sum_digits = 0
-    id = int(id)
-    while id > 0:
-        sum_digits += id % 10
-        id //= 10
+    try:
+        id_ = int(id)
+    except:
+        id_ = 1
+    while id_ > 0:
+        sum_digits += id_ % 10
+        id_ //= 10
     return sum_digits % providers_count
 
 def select_and_click_provider(logger,driver,output_XL_path,row,error_col,costumer_id):

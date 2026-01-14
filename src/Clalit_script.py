@@ -300,7 +300,7 @@ if report:
             except:
                 logger.error("error with writing to excel after failed report, for:", costumer["id"])
             driver.quit()
-
+            logger.info("starting new log-in...")
             driver = functions.set_up_full_log_in(config.site_link, config.login_name, login_password,
                                                   config.login_verification)
 
